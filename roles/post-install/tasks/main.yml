@@ -1,0 +1,15 @@
+---
+# tasks file for first-actions
+
+
+- name: Warnings can't do necessary for this distribution
+  fail:
+    msg: "Can't do necessary for the machine: {{ ansible_hostname }}"
+  when: ansible_facts['os_family'] != 'RedHat' and ansible_facts['os_family'] != 'Debian'
+
+- include_vars: "{{ role_path }}/vars/{{ ansible_facts['os_family']|lower }}_based.yml"
+
+- import_tasks: ssh_authorized_key.yml
+
+- import_tasks: root.yml
+  become: true

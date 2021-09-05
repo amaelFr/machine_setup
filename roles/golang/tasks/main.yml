@@ -1,0 +1,26 @@
+---
+# tasks file for roles/golang
+- name: Install golang
+  become: true
+  block:
+    - name: Removes golang
+      file:
+        path: /usr/local/go
+        state: absent
+
+    - name: Get last go release
+      uri:
+        url: https://golang.org/VERSION
+        return_content: yes
+      register: go_version
+
+    - name: Fail when architecture is not yet implemented
+      fail:
+        msg: Unsupported architecture {{ ansible_architecture }}
+      when: ansible_architecture != 'x86_64'
+
+    - name: Unarchive go after download
+      unarchive:
+        src: https://golang.org/dl/{{ go_version['content'] }}.linux-amd64.tar.gz
+        dest: /usr/local/
+        remote_src: yes

@@ -1,0 +1,9 @@
+---
+# tasks file for user-gestion
+
+- name: Add users and groups
+  include: user_gestion.yml
+  loop: "{{ users }}"
+  loop_control:
+    loop_var: user
+  when: users|d(False)

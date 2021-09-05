@@ -1,0 +1,18 @@
+#!/bin/sh
+
+PROC=`cat /proc/cpuinfo | grep -i "^model name" | awk -F": " '{print $2}' | head -n 1`
+RAMFREE=`cat /proc/meminfo | grep MemFree | awk {'print $2'}`
+RAM=`cat /proc/meminfo | grep MemTotal | awk {'print $2'}`
+UPTIME=`uptime -p`
+ADDR=`hostname -I | cut -d " " -f1`
+
+# Récupérer le loadavg
+read LAOD_ONE LOAD_FIVE LOAD_FIFTEEN rest < /proc/loadavg
+
+# Affichage des variables
+echo "  Processeur : $PROC
+  Charge CPU : $LAOD_ONE (1min)/ $LOAD_FIVE (5min) / $LOAD_FIFTEEN (15min)
+  Adresse IP : $ADDR
+  RAM : $(($RAMFREE/1024))MB libres / $(($RAM/1024))MB
+  Uptime : $UPTIME
+"

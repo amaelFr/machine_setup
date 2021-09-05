@@ -1,0 +1,135 @@
+
+# - block:
+#     - name: Check if a superuser if ever set, sign of an other user boot protect
+#       shell:
+#         cmd: grep superusers /etc/grub.d/*_*
+#       changed_when: false
+#       failed_when: false
+#       register: grub_ever_conf
+#     - block:
+#         - fail:
+#             msg: Warning it look like grub have ever been configure with a super user for grub
+#           failed_when: false
+#           when: grub_ever_conf.rc != 1
+#         - name: Would you like to stop, if yes Control + C
+#           pause:
+#             seconds: 10
+#     - name: Generate grub2 password
+#       block:
+#         - shell:
+#             cmd: |
+#               cat << EOF | grub-mkpasswd-pbkdf2
+#               {{ grub_password }}
+#               {{ grub_password }}
+
+#               EOF
+#           # no_log: true
+#           register: grub_password_out
+#           when: grub_conf_file.stat.exists
+#         - shell:
+#             cmd: |
+#               cat << EOF | grub2-mkpasswd-pbkdf2
+#               {{ grub_password }}
+#               {{ grub_password }}
+
+#               EOF
+#           # no_log: true
+#           register: grub2_password_out
+#           when: grub2_conf_file.stat.exists
+#     - set_fact:
+#         password_grub: "{{ grub_password_out.stdout_lines[2].split(' ')[-1] }}"
+#       when: grub_conf_file.stat.exists
+#     - set_fact:
+#         password_grub: "{{ grub2_password_out.stdout_lines[2].split(' ')[-1] }}"
+#       when: grub2_conf_file.stat.exists
+#     - name: Insert grub password at end of /etc/grub.d/40_custom
+#       lineinfile:
+#         path: /etc/grub.d/40_custom
+#         line: |
+
+#           set superusers="{{ grub_user|d(ansible_user)|d('root') }}"
+#           password_pbkdf2 {{ grub_user|d(ansible_user)|d('root') }} {{ password_grub }}
+#   when: grub_password|d(false)
+
+# - name: Unrestricted option check
+#   block:
+#     - shell:
+#         cmd: grep "CLASS.*\-\-unrestricted" /etc/grub.d/*_*
+#       register: grub_unrestrected
+#       failed_when: false
+#     - name: Add unrestricted option
+#       replace:
+#         path: /etc/grub.d/10_linux
+#         regexp: '(?P<class_group>CLASS="[ \-a-zA-Z0-1]*)" *$'
+#         replace: '\g<class_group> --unrestricted"'
+#       when: grub_unrestrected.rc!=0
+#   when: grub_unrestricted|d(False)
+
+# - name: GRUB_DISABLE_RECOVERY
+#   ansible.builtin.lineinfile:
+#     path: /etc/default/grub
+#     regexp: GRUB_DISABLE_RECOVERY=.*$
+#     line: GRUB_DISABLE_RECOVERY=true
+# - name: Ensure the default Apache port is 8080
+#   ansible.builtin.lineinfile:
+#     path: /etc/default/grub
+#     regexp: GRUB_DISABLE_SUBMENU=.*$
+#     line: GRUB_DISABLE_SUBMENU=y
+
+
+
+# - block:
+#     - name: install dropbear
+#       apt:
+#         name: dropbear-initramfs
+#         state: present
+#     - name: Setting up options for dropbear
+#       ansible.builtin.lineinfile:
+#         path: /etc/dropbear-initramfs/config
+#         regexp: ^DROPBEAR_OPTIONS=.*$
+#         line: DROPBEAR_OPTIONS="-I 180 -j -k -p 2222 -s"
+#     - block:
+#         - block:
+#             - local_action:
+#                 module: stat
+#                 path: ~/.ssh/dropbear_key
+#               register: dropbear_key
+#             - local_action:
+#                 module: openssh_keypair
+#                 path: ~/.ssh/dropbear_key
+#                 type: rsa
+#                 size: 4096
+#                 state: present
+#                 force: no
+#               when: not dropbear_key.stat.exists
+#           become: no
+#         - ansible.posix.authorized_key:
+#             path: /etc/dropbear-initramfs/authorized_keys
+#             user: "root"
+#             state: present
+#             key: "{{ lookup('file', '~/.ssh/dropbear_key.pub') }}"
+#             manage_dir: yes
+#       when: not grub_authorized_key|d(false)
+#     - ansible.posix.authorized_key:
+#         path: /etc/dropbear-initramfs/authorized_keys
+#         user: "root"
+#         state: present
+#         key: "{{ grub_authorized_key }}"
+#         manage_dir: yes
+#         exclusive: yes
+#       when: grub_authorized_key|d(false)
+#     - shell:
+#         cmd: update-initramfs -u
+#       register: update_initramfs_out
+#       failed_when: (update_initramfs_out.stderr_lines|length) != 0
+#   when: grub_ssh|d(False)
+
+# - name: Generate grub2 config
+#   block:
+#     - command:
+#         cmd: grub-mkconfig -o /boot/grub/grub.cfg
+#       when: grub_conf_file.stat.exists
+#     - command:
+#         cmd: grub2-mkconfig -o /boot/grub2/grub.cfg
+#       register: grub2_password_out
+#       when: grub2_conf_file.stat.exists

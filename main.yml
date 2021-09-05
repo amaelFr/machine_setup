@@ -1,0 +1,18 @@
+---
+
+# ansible-playbook -i inventory/default -i localhost, main.yml
+
+# - hosts: all
+#   roles:
+#     # - vim
+#     # - golang
+
+- hosts: all
+  roles:
+    - post-install
+
+- hosts: all
+  become: true
+  roles:
+    - user-gestion
+    # - secure-grub

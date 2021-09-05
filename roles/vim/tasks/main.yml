@@ -1,0 +1,132 @@
+---
+# tasks file for roles/vim
+
+- name: Remove vim artifacts
+  block:
+    - name: Finds .vimrc files
+      find:
+        paths: ~/
+        patterns: \.vim.*
+        use_regex: yes
+        hidden: yes
+      register: vimrc_artifcats
+    - name: Removes vim artifcats
+      file:
+        path: "{{ vimrc_vimrc_artifcat.path }}"
+        state: absent
+      loop_control:
+        loop_var: vimrc_vimrc_artifcat
+      loop: '{{ vimrc_artifcats.files }}'
+
+
+- name: Create .vim directory struct
+  file:
+    path: ~/.vim/{{vim_subfolder}}
+    state: directory
+  loop_control:
+    loop_var: vim_subfolder
+  loop:
+      - autoload
+      - backup
+      - color
+      - plugged
+      - subconf
+
+
+- name: Check vimrc file existence
+  local_action:
+    module: stat
+    path: "{{ role_path }}/files/vimrc"
+  register: vimrc_file
+- name: Copy vimrc
+  copy:
+    src: "{{ role_path }}/files/vimrc"
+    dest: ~/.vimrc
+  when: vimrc_file.stat.exists
+
+
+- name: Check vim subconf folder existence
+  local_action:
+    module: stat
+    path: "{{ role_path }}/files/subconf"
+  register: vimrc_subconf_fold
+- name: Copy vimrc subconf
+  copy:
+    src: "{{ role_path }}/files/subconf"
+    dest: ~/.vim/subconf
+  when: vimrc_subconf_fold.stat.exists
+
+
+- name: Check vimrc template existence
+  local_action:
+    module: stat
+    path: "{{ role_path }}/templates/vimrc.j2"
+  register: vimrc_template
+- name: Create vimrc
+  template:
+    src: "{{ role_path }}/templates/vimrc.j2"
+    dest: "~/.vimrc"
+  when: vimrc_template.stat.exists
+
+
+- name: Check vimrc template existence
+  local_action:
+    module: stat
+    path: "{{ role_path }}/templates/subconf"
+  register: vimrc_subconf_fold
+- name: Create vimrc subconf
+  template:
+    src: "{{ vimrc_subconf }}"
+    dest: ~/.vim/subconf/{{ vimrc_subconf | basename | regex_replace('\.j2$', '') }}
+  loop_control: 
+    loop_var: vimrc_subconf
+  loop: "{{ query('fileglob', '{{ role_path }}/templates/subconf/*.j2') }}" 
+  when: vimrc_subconf_fold.stat.exists
+
+
+
+
+
+
+
+
+- name: Get vim-plug
+  get_url:
+    url: https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+    dest: ~/.vim/autoload/plug.vim
+
+
+# - name: Test root privilege escalation
+#   block:
+#     - ping:
+#       become: true
+#     - set_fact:
+#         root_priv_esc: true
+#   rescue:
+#     - ping:
+#   when: vim_root_change
+
+
+
+
+
+- name: Install latest vim
+  become: true
+  package:
+    name: vim
+    state: latest
+
+
+
+
+- name: Install vim plugin using plugin manager
+  shell:
+    cmd: echo -e "\n" | vim +'PlugInstall --sync' +qa
+
+
+# ## Vim package dependencie
+# - name: Install coc.vim dependencie
+#   community.general.npm:
+#     path: ~/.vim/plugged/coc.vim
+#   environment:
+#     PATH: "{{ omit if vim_root_change and root_priv_esc else ansible_env.HOME+'/.bin' }}"

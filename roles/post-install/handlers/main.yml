@@ -1,0 +1,16 @@
+---
+# handlers file for first-actions
+- name: Restart chrony
+  become: true
+  ansible.builtin.service:
+    name: "{{ chrony_service|d('chrony') }}"
+    state: restarted
+
+- name: Reboot server
+  reboot:
+    msg: "Reboot initiated by Ansible for kernel updates"
+    connect_timeout: 5
+    reboot_timeout: 3600
+    pre_reboot_delay: 0
+    post_reboot_delay: 30
+    test_command: uptime

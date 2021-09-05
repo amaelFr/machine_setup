@@ -1,0 +1,32 @@
+- name: Check if local public key exist
+  local_action:
+    module: stat
+    path: "{{ authorized_key }}"
+  register: authorized_key_stat
+  when: authorized_key|regex_search('^ssh-[0-9a-z]+ ') )
+
+# - block:
+#   - name: Get local publick key file
+#     become: false
+#     local_action:
+#       module: find
+#       paths: ~/.ssh
+#       patterns: "^id_[a-z0-9]*.pub$"
+#       use_regex: yes
+#     register: pubKeyFiles
+#   - name: Error getting public key zero or more than one are present
+#     fail:
+#       msg: "{{ pubKeyFiles }}" 
+#     when: pubKeyFiles.files|length != 1
+#   - ansible.posix.authorized_key:
+#       user: "{{ ssh_user|d(ansible_user) }}"
+#       state: present
+#       key: "{{ lookup('file', pubKeyFiles.files[0].path) }}"
+#       manage_dir: yes
+#   when: not ssh_pub_key|d(False)
+# - ansible.posix.authorized_key:
+#     user: "{{ ssh_user|d(ansible_user) }}"
+#     state: present
+#     key: "{{ ssh_pub_key }}"
+#     manage_dir: yes
+#   when: ssh_pub_key|d(False)

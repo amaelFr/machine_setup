@@ -1,0 +1,36 @@
+
+- name: Remove NTP
+  package:
+    name: ntp
+    state: absent
+
+- name: Set timezone to {{ timezone }}
+  community.general.timezone:
+    name: "{{ timezone }}"
+
+- name: Install chrony
+  package:
+    name: chrony
+    state: latest
+
+- name: Creates directory
+  file:
+    path: /etc/chony/{{ chrony_subfolder }}
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  loop_control:
+    loop_var: chrony_subfolder
+  loop:
+    # - conf.d
+    - sources.d
+
+- name: Configure chronyd
+  template:
+    src: chrony.conf.j2
+    dest: "{{ chrony_conf_file }}"
+  notify:
+    - Restart chrony
+
+#restart systemd-timesyncd for sync debian based remove systemd-timesyncd

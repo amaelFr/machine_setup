@@ -1,0 +1,6 @@
+---
+all:
+  hosts:
+  children:
+    wiki: # must be a docker compose machine
+    wordpress: # must be a docker compose machine

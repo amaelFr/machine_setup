@@ -1,0 +1,4 @@
+---
+# vars file for roles/vim
+
+root_priv_esc: false

@@ -1,0 +1,14 @@
+---
+# tasks file for secure-grub
+- name: Check grub version and config file
+  block: 
+    - stat:
+        path: /boot/grub/grub.cfg
+      register: grub_conf_file
+    - stat:
+        path: /boot/grub2/grub.cfg
+      register: grub2_conf_file
+    - name: Fail if non compatible system
+      fail:
+        msg: It look like the file /boot/grub(2)/grub.cfg is not present, we use it to get the grub version (2), if not present if could be because the bootloader use is not grub2
+      when: not grub_conf_file.stat.exists and not grub2_conf_file.stat.exists

@@ -1,0 +1,7 @@
+---
+# tasks file for chroot
+- include_tasks: chroot.yml
+  loop: "{{ CHROOTs }}"
+  loop_control:
+    loop_var: chroot
+  when: CHROOTs|d(False)

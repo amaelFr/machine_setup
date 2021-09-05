@@ -1,0 +1,75 @@
+# /etc/profile: system-wide .profile file for the Bourne shell (sh(1))
+# and Bourne compatible shells (bash(1), ksh(1), ash(1), ...).
+
+function update_PATH(){
+
+    function add_PATH(){
+        if [ -z "$1" ] || [ "$#" -ne 1 ]; then
+            echo "Error you must provide a parameter and only one"
+            return 1
+        fi
+        if ! [[ "${PATH}" == *"$1"* ]] && [ -d "$1" ]; then
+            PATH="${PATH}:$1"
+        fi
+        return 0
+    }
+    
+    if [ -z "${PATH}" ]; then
+        PATH="/usr/local/bin"
+    else
+        add_PATH "/usr/local/bin"
+    fi
+    add_PATH  "/usr/bin"
+    add_PATH  "/bin"
+
+    add_PATH  "/snap/bin"
+
+    if [ "`id -u`" -eq 0 ]; then
+        add_PATH "/usr/local/sbin"
+        add_PATH  "/usr/sbin"
+        add_PATH  "/sbin"
+    fi
+
+    if ! [ -z "${HOME}" ]; then
+        add_PATH "${HOME}/bin"
+        add_PATH "${HOME}/.local/bin"
+    fi
+
+    add_PATH "/usr/games"
+    add_PATH "/usr/local/games"
+
+    unset -f add_PATH
+}
+update_PATH
+unset -f update_PATH
+
+if [ "`id -u`" -eq 0 ]; then
+  umask 0077
+else
+  umask 0022
+fi
+
+if [ "${PS1-}" ]; then
+  if [ "${BASH-}" ] && [ "$BASH" != "/bin/sh" ]; then
+    # The file bash.bashrc already sets the default PS1.
+    # PS1='\h:\w\$ '
+    if [ -f /etc/bash.bashrc ]; then
+      . /etc/bash.bashrc
+    fi
+  else
+    if [ "`id -u`" -eq 0 ]; then
+      PS1='# '
+    else
+      PS1='$ '
+    fi
+  fi
+fi
+
+if [ -d /etc/profile.d ]; then
+  for i in /etc/profile.d/*.sh; do
+    if [ -r $i ]; then
+      . $i
+    fi
+  done
+  unset i
+fi

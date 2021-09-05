@@ -1,0 +1,10 @@
+---
+- hosts: all
+  roles:
+    # - post-install
+
+- hosts: all
+  become: true
+  roles:
+    - user-gestion
+    # - secure-grub

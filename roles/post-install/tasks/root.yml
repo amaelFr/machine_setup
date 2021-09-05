@@ -1,0 +1,153 @@
+---
+
+- name: Change hostname
+  block:      
+    - name: Replace hostname /etc/hosts
+      ansible.builtin.replace:
+        path: /etc/hosts
+        regexp: '({{ ansible_facts["hostname"] }})'
+        replace: '{{ hostname|d(inventory_hostname) }}'
+      register: replace_hosts
+    - name: Add hostname to /etc/hosts
+      lineinfile:
+        path: /etc/hosts
+        line: 127.0.0.1 {{ hostname|d(inventory_hostname) }}
+      when: not replace_hosts.changed and hostname|d(inventory_hostname) != ansible_facts["hostname"]
+    - name: Set hostname
+      ansible.builtin.hostname:
+        name: "{{ hostname|d(inventory_hostname) }}"
+  when: ( not hostname|d(inventory_hostname)|regex_search('^((2((5[0-5])|([0-4][0-9]))|[0-1]?[0-9]{1,2}).){3}(2((5[0-5])|([0-4][0-9]))|[0-1]?[0-9]{1,2})$') ) and hostname|d(inventory_hostname) != ansible_facts['hostname']
+
+
+- name: Remove unecessary packages if security level > -1
+  block:
+    - name: Detect if system use GUI
+      stat:
+        path: /usr/share/xsessions
+      register: xsessions
+    - name: Remove unecessary packages
+      package:
+        name: "{{ packages.unnecessary.all + packages.unnecessary.custom + ( [] if xsessions.stat.exists else packages.unnecessary.server ) }}"
+        state: absent
+      when: 
+  when: machine_level > -1
+
+
+- name: Upgrade all Debian based
+  block:
+    - name: Update apt repo and cache
+      apt:
+        update_cache: yes
+        force_apt_get: yes
+    - name: Upgrade all packages
+      apt:
+        upgrade: dist
+        force_apt_get: yes
+    - name: Check if a reboot is required
+      stat:
+        path: /var/run/reboot-required
+        get_md5: no
+      register: reboot_required_file
+      changed_when: reboot_required_file.stat.exists
+      notify:
+        - Reboot server
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Upgrade all RHEL based
+  block:
+    - when: ansible_facts ['distribution_major_version'] < '8'
+      block:
+        - yum:
+            name: '*'
+            state: latest
+            update_cache: yes
+            update_only: no
+        - yum:
+            name: yum-utils
+            state: latest
+            update_cache: yes
+    - when: ansible_facts ['distribution_major_version'] >= '8'
+      block:
+        - dnf:
+            name: '*'
+            state: latest
+            update_cache: yes
+            update_only: no
+        - dnf:
+            name: dnf-utils
+            state: latest
+            update_cache: yes
+    - name: Check if a reboot is required
+      command: needs-restarting -r
+      register: reboot_required
+      ignore_errors: yes
+      failed_when: false
+      changed_when: reboot_required.rc != 0
+      notify:
+        - Reboot server
+  when: ansible_facts['os_family'] == 'RedHat'
+
+
+- name: Add custom based package
+  # apt:
+  #   pkg:
+  package:
+    name:
+      - vim
+      - tmux
+      - git
+      # mlocate rsync htop net-tools vim tmux zip pigz pixz iotop git psmisc
+      # tree lynx at postfix lshw inxi figlet gdisk mc cifs-utils ntfs-3g sudo curl
+      # sshfs apt-file openssl gnupg2 dnsutils fish gpm grc postfix ncdu p7zip-full
+      # parted
+
+
+# - name: Enable vim as default editor
+#   block:
+#     - ansible.builtin.file:
+#         path: /etc/alternatives/editor
+#         state: absent
+#     - file:
+#         src: /usr/bin/vim # /usr/bin/vim.basic not disponible on RHEL based
+#         dest: /etc/alternatives/editor
+#         state: link
+
+
+# - name: Remove motd files
+#   file:
+#     path: /etc/{{ item }}
+#     state: absent
+#   loop:
+#     - update-motd.d
+#     - motd
+
+
+# - name: System customization based files
+#   copy:
+#     src: "{{role_path}}/files/{{ item }}"
+#     dest: "/etc/"
+#     force: yes
+#     group: root
+#     owner: root
+#     mode: preserve
+#   loop:
+#     - profile
+#     - bash.bashrc
+#     - issue
+#     - skel
+#     - default
+#     - cron.allow
+#     - update-motd.d
+#     # - motd
+
+# - name: Ansible preprare host
+#   ansible.builtin.file:
+#     src: /etc/{{ item.src }}
+#     dest: /etc/{{ item.dest }}
+#     state: hard
+#     force: yes
+#   loop:
+#     - src: issue
+#       dest: issue.net
+
+- import_tasks: chrony.yml

@@ -1,0 +1,14 @@
+---
+machine_level: 3
+
+timezone: Europe/London
+ntp:
+  pool: 0.pool.ntp.org
+
+packages:
+  unnecessary:
+    all:
+      - telnet
+    server: 
+      - task-laptop
+    custom: []

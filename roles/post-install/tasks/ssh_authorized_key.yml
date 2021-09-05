@@ -1,0 +1,25 @@
+- block:
+  - name: Get local publick key file
+    become: false
+    local_action:
+      module: find
+      paths: ~/.ssh
+      patterns: "^id_[a-z0-9]*.pub$"
+      use_regex: yes
+    register: pubKeyFiles
+  - name: Error getting public key zero or more than one are present
+    fail:
+      msg: "{{ pubKeyFiles }}" 
+    when: pubKeyFiles.files|length != 1
+  - ansible.posix.authorized_key:
+      user: "{{ ssh_user|d(ansible_user) }}"
+      state: present
+      key: "{{ lookup('file', pubKeyFiles.files[0].path) }}"
+      manage_dir: yes
+  when: not ssh_pub_key|d(False)
+- ansible.posix.authorized_key:
+    user: "{{ ssh_user|d(ansible_user) }}"
+    state: present
+    key: "{{ ssh_pub_key }}"
+    manage_dir: yes
+  when: ssh_pub_key|d(False)

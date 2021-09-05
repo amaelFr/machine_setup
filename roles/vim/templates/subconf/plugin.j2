@@ -1,0 +1,90 @@
+{% raw %}
+" PLUGINS ---------------------------------------------------------------- {{{
+
+call plug#begin('~/.vim/plugged')
+
+  " ALE (Asynchronous Lint Engine) is a plugin providing linting (syntax checking and semantic errors)
+  Plug 'dense-analysis/ale'
+
+  Plug 'preservim/nerdtree'
+
+  " A statusline at the bottom
+  "Plug 'vim-airline/vim-airline'
+  Plug 'itchyny/lightline.vim'
+
+  " A syntax checking plugin
+  Plug 'vim-syntastic/syntastic'
+
+  " A rainbow parentheses plugin
+  Plug 'frazrepo/vim-rainbow'
+
+  " A comment in block plugin
+  Plug 'preservim/nerdcommenter'
+
+  " A auto pair plugin
+  Plug 'jiangmiao/auto-pairs'
+  " To find how to add multiligne comment
+  " A plugin for surrond capability
+  "Plug 'tpope/vim-surround'
+
+  " A multieditor plugin to get same project spec
+  Plug 'editorconfig/editorconfig-vim'
+
+  Plug 'neoclide/coc.nvim'
+
+  " Language specific
+  
+  Plug 'fatih/vim-go', { 'do': ':GoUpdateBinaries' }
+  
+  
+call plug#end()
+
+
+
+
+" SPECIFIC PLUGIN CONF
+
+
+
+
+" SPECIFIC STATUS LINE PLUGIN CONF
+
+set laststatus=2
+
+
+
+
+" SPECIFIC SYTASTIC CONF
+
+set statusline+=%#warningmsg#
+set statusline+=%{SyntasticStatuslineFlag()}
+set statusline+=%*
+
+let g:syntastic_always_populate_loc_list = 1
+let g:syntastic_auto_loc_list = 1
+let g:syntastic_check_on_open = 1
+let g:syntastic_check_on_wq = 0
+
+
+
+
+" SPECIFIC vim-rainbow CONF
+
+let g:rainbow_active = 1
+
+
+
+
+" SPECIFIC NERDTree CONF
+" Map the F3 key to toggle NERDTree open and close.
+nnoremap <F3> :NERDTreeToggle<cr>
+
+" Have nerdtree ignore certain files and directories.
+let NERDTreeIgnore=['\.git$', '\.jpg$', '\.mp4$', '\.ogg$', '\.iso$', '\.pdf$', '\.pyc$', '\.odt$', '\.png$', '\.gif$', '\.db$']
+
+
+
+
+" }}}
+
+{% endraw %}
