@@ -1,2 +1,3 @@
 ---
 # vars file for user-gestion
+ssh_regex: '^ssh-[0-9a-z]+ AAAA[0-9A-Za-z+/]+[=]{0,3}( ([^@ ]+@[^@ ]+))?$'

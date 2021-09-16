@@ -1,4 +1,6 @@
 ---
+# ansible-playbook -i inventory/default -i inventory/test_server test.yml
+
 - hosts: all
   roles:
     # - post-install
@@ -8,3 +10,4 @@
   roles:
     - user-gestion
     # - secure-grub
+    - docker

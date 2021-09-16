@@ -16,3 +16,11 @@
   roles:
     - user-gestion
     # - secure-grub
+
+- hosts:
+    - docker
+    - wiki
+    - wordpress
+  become: true
+  roles:
+    - docker

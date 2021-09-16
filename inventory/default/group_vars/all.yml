@@ -1,8 +1,13 @@
 ---
 
-ansible-playbook -i inventory/test_server main.yml
+# ansible-playbook -i inventory/test_server main.yml
 
 # machine level, (3 => High risk, 0 => Low risk) serveur , -1 generaly personnal machine
 machine_level: 3
 
 # vim_root_change: true
+
+users:
+  - name: testdocker
+    uid: 280
+    service: true

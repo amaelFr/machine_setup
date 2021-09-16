@@ -5,7 +5,7 @@
       ansible.builtin.group:
         name: "{{ user.group|d(user.name) }}"
         state: present
-        gid: "{{ user.gid|d(omit) }}"
+        gid: "{{ user.gid|d(user.uid)|d(omit) }}"
 
     - name: Add the user
       ansible.builtin.user:
@@ -13,10 +13,10 @@
         comment: "{{ user.comment|d(omit) }}"
         uid: "{{ user.uid|d(omit) }}"
         group: "{{ user.group|d(user.name) }}"
-        shell: "{{ user.shell if user.enable|d(true) and user.shell_enable|d(true) and user.shell|d(false) else '/usr/bin/nologin' }}"
+        shell: "{{ user.shell if user.enable|d(true) and user.shell_enable|d(true) and user.shell|d(false) and not user.service|d(false) else '/usr/bin/nologin' }}"
         home: "{{ user.home|d(omit) }}"
-        password: "{{ (user.password|d(user.pass)|password_hash('sha512'))|d(omit) }}"
-        password_lock: "{{ omit if user.enable|d(true) else true}}"
+        password: "{{ user.password|d(user.pass)|password_hash('sha512') if user.password is defined or user.pass is defined else omit }}"
+        password_lock: "{{ omit if user.enable|d(true) and not user.service|d(false) else true}}"
         update_password: "{{ 'on_create' if user.update_password|d(false) else omit}}"
 
     - name: Add the user to segondary groups
@@ -29,28 +29,31 @@
         loop_var: user.secondary_group
       when: user.secondary_groups|d(user.s_groups)|d(user.groups)|d(False)
 
-    - name: Find private SSHkeys
-      find:
-        paths: "{{ user.home|d('/home/'+user.name+'/.ssh/') }}"
-        patterns: '^id[^\.]+$'
-        use_regex: yes
-      register: user_ssh_key_current
-    - name: SSHkey generation
-      ansible.builtin.user:
-        name: "{{ user.name }}"
-        generate_ssh_key: yes
-        ssh_key_bits: "{{ user.ssh_key.size|d(8192) }}"
-        ssh_key_file: "{{ user.ssh_key.file|d(omit) }}"
-        ssh_key_passphrase: "{{ user.ssh_key.passphrase|d(user.ssh_key.pass)|d(omit) }}"
-        ssh_key_type: "{{ user.ssh_key.type|d(omit) }}" # "{{ user.ssh_key.type|d('ed25519') }}"
-      when: user.ssh_key is defined|d(false) and ( user_ssh_key_current.files|length == 0 or user.ssh_key.update|d(false) or user.ssh_key.regen|d(false) or user.ssh_key.regenerate|d(false) )
-    
-    - name: Deploy authorized_keys
-      include: ssh_authorized_key.yml
-      loop: "{{ user.authorized_keys }}"
-      loop_control:
-        loop_var: authorized_key
-      when: user.authorized_keys|d(False)
+    - name: User public ssh keys 
+      when: user.service|d(false)
+      block:
+        - name: Find private SSHkeys
+          find:
+            paths: "{{ user.home|d('/home/'+user.name+'/.ssh/') }}"
+            patterns: '^id[^\.]+$'
+            use_regex: yes
+          register: user_ssh_key_current
+        - name: SSHkey generation
+          ansible.builtin.user:
+            name: "{{ user.name }}"
+            generate_ssh_key: yes
+            ssh_key_bits: "{{ user.ssh_key.size|d(8192) }}"
+            ssh_key_file: "{{ user.ssh_key.file|d(omit) }}"
+            ssh_key_passphrase: "{{ user.ssh_key.passphrase|d(user.ssh_key.pass)|d(omit) }}"
+            ssh_key_type: "{{ user.ssh_key.type|d(omit) }}" # "{{ user.ssh_key.type|d('ed25519') }}"
+          when: user.ssh_key is defined|d(false) and ( user_ssh_key_current.files|length == 0 or user.ssh_key.update|d(false) or user.ssh_key.regen|d(false) or user.ssh_key.regenerate|d(false) )
+        
+        - name: Deploy authorized_keys
+          include: ssh_authorized_key.yml
+          loop: "{{ user.authorized_keys }}"
+          loop_control:
+            loop_var: authorized_key
+          when: user.authorized_keys|d(False)
 
 - name: Remove user and group
   when: not(user.state|d(true) == true or user.state|d(omit) == "present")

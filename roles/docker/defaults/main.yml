@@ -1,0 +1,26 @@
+---
+# defaults file for docker
+
+container:
+  rootless: true
+  podman: false
+  users: []
+
+docker_packages_to_add:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+
+docker_packages_to_remove_redhat_based:
+  - docker
+  - docker-client
+  - docker-client-latest
+  - docker-common
+  - docker-latest
+  - docker-latest-logrotate
+  - docker-logrotate
+  - docker-engine
+  - docker-selinux
+  - docker-engine-selinux
+  - runc
+

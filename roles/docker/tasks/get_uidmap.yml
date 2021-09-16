@@ -1,0 +1,30 @@
+---
+- name: Get /etc/subuid
+  slurp:
+    src: /etc/subuid
+  register: slurp_subuid
+
+- name: Get /etc/subgid
+  slurp:
+    src: /etc/subgid
+  register: slurp_subgid
+
+- set_fact:
+    high_subuid: 100000
+    high_subgid: 100000
+    subuid_list: "{{ (slurp_subuid['content']|b64decode|trim).split('\n')|map('split', ':') }}"
+    subgid_list: "{{ (slurp_subgid['content']|b64decode|trim).split('\n')|map('split', ':') }}"
+
+- set_fact:
+    high_subuid: "{{ subuid[1]|int + subuid[2]|int }}"
+  when: ((subuid[1]|int) + (subuid[2]|int)) > high_subuid|int
+  loop: "{{ subuid_list }}"
+  loop_control:
+    loop_var: subuid
+
+- set_fact:
+    high_subuid: "{{ subgid[1]|int + subgid[2]|int }}"
+  when: ((subgid[1]|int) + (subgid[2]|int)) > high_subgid|int
+  loop: "{{ subgid_list }}"
+  loop_control:
+    loop_var: subgid

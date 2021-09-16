@@ -1,0 +1,99 @@
+---
+- set_fact:
+    container_runtime_user: "{{ {'user':container_runtime_user, 'enabled': false} }}"
+  when: container_runtime_user is not mapping
+
+- name: Get greater uidmap
+  import_tasks: get_uidmap.yml
+- name: Get docker user
+  getent:
+    database: passwd
+    key:  "{{ container_runtime_user.user }}"
+  register: container_runtime_user_info
+
+- set_fact:
+    container_runtime_username: '{{ (container_runtime_user_info["ansible_facts"]["getent_passwd"]|list)[0] }}'
+
+- name: Get docker user group
+  getent:
+    database: group
+    key:  '{{ container_runtime_user_info["ansible_facts"]["getent_passwd"][container_runtime_username][2] }}'
+  register: container_runtime_user_group_info
+
+- set_fact:
+    container_runtime_groupname: '{{ (container_runtime_user_info["ansible_facts"]["getent_passwd"]|list)[0] }}'
+
+
+- name: Add a uidmap to /etc/subuid
+  ansible.builtin.lineinfile:
+    path: /etc/subuid
+    line: '{{ container_runtime_username }}:{{ high_subuid }}:65536'
+    create: yes
+  when: container_runtime_username not in (subuid_list|json_query(_query)) and container_runtime_user_info["ansible_facts"]["getent_passwd"][container_runtime_username][1] not in (subuid_list|json_query(_query))
+  vars:
+    _query: "[*][0]"
+
+
+- name: Add a uidmap to /etc/subgid
+  ansible.builtin.lineinfile:
+    path: /etc/subgid
+    line: '{{ container_runtime_groupname }}:{{ high_subgid }}:65536'
+    create: yes
+  when: container_runtime_groupname not in (subgid_list|json_query(_query)) and container_runtime_user_group_info["ansible_facts"]["getent_group"][container_runtime_groupname][1] not in (subgid_list|json_query(_query))
+  vars:
+    _query: "[*][0]"
+
+- name: Enable linger for docker user
+  command: loginctl enable-linger {{ container_runtime_username }}
+
+# - name: Uninstall docker root less for a user before installing
+#   become_user: "{{ (container_runtime_user_info['ansible_facts']['getent_passwd']|list)[0] }}"
+#   command:
+#     argv:
+#       - dockerd-rootless-setuptool.sh
+#       - uninstall
+#   environment:
+#     DBUS_SESSION_BUS_ADDRESS: unix:path=/run/user/{{ container_runtime_user_info["ansible_facts"]["getent_passwd"][container_runtime_username][1] }}/bus
+#     XDG_RUNTIME_DIR: /run/user/{{ container_runtime_user_info["ansible_facts"]["getent_passwd"][container_runtime_username][1] }}
+#   register: docker_rootless_un
+
+# - name: Install docker root less for a user
+#   become_user: "{{ (container_runtime_user_info['ansible_facts']['getent_passwd']|list)[0] }}"
+#   command:
+#     argv:
+#       - dockerd-rootless-setuptool.sh
+#       - install
+#   environment:
+#     DBUS_SESSION_BUS_ADDRESS: unix:path=/run/user/{{ container_runtime_user_info["ansible_facts"]["getent_passwd"][container_runtime_username][1] }}/bus
+#     XDG_RUNTIME_DIR: /run/user/{{ container_runtime_user_info["ansible_facts"]["getent_passwd"][container_runtime_username][1] }}
+#   register: docker_rootless_in
+#   # failed_when: not 'Installed docker.service successfully.' in docker_rootless_in.stderr
+#   failed_when: not 'Successfully created context' in docker_rootless_in.stderr
+
+- name: Disable docker at user level
+  become_user: "{{ (container_runtime_user_info['ansible_facts']['getent_passwd']|list)[0] }}"
+  become: true
+  ansible.builtin.systemd:
+    name: docker
+    daemon_reload: yes
+    enabled: false
+    scope: user
+    state: stopped
+  register: docker_systemd
+  failed_when: "'msg' in docker_systemd and not 'Could not find the requested service docker' in docker_systemd.msg"
+  environment:
+    DBUS_SESSION_BUS_ADDRESS: unix:path=/run/user/{{ container_runtime_user_info["ansible_facts"]["getent_passwd"][container_runtime_username][1] }}/bus
+    XDG_RUNTIME_DIR: /run/user/{{ container_runtime_user_info["ansible_facts"]["getent_passwd"][container_runtime_username][1] }}
+
+- name: Create dockerd service for user
+  template:
+    src: docker.service.j2
+    dest: /etc/systemd/system/docker_{{ container_runtime_username }}.service
+
+
+- name: Container runtime systemd gestion
+  ansible.builtin.systemd:
+    name: docker_{{ container_runtime_username }}.service
+    state: "{{ 'started' if container_runtime_user.enabled|d(false) else 'stopped' }}"
+    enabled: "{{ container_runtime_user.enabled|d(false) }}"
+    daemon_reload: yes

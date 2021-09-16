@@ -5,10 +5,27 @@ timezone: Europe/London
 ntp:
   pool: 0.pool.ntp.org
 
+dynamic_motd: true
+
 packages:
-  unnecessary:
+  to_remove:
     all:
       - telnet
     server: 
       - task-laptop
+      # mlocate rsync htop net-tools vim tmux zip pigz pixz iotop git psmisc
+      # tree lynx at postfix lshw inxi figlet gdisk mc cifs-utils ntfs-3g sudo curl
+      # sshfs apt-file openssl gnupg2 dnsutils fish gpm grc postfix ncdu p7zip-full
+      # parted
+    desktop: []
     custom: []
+  to_install:
+    all:
+      - vim
+      - tmux
+      - git
+    server: []
+    desktop: []
+    custom: []
+
+deploy_current_ssh_key: true

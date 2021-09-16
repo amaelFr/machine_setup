@@ -1,0 +1,60 @@
+---
+
+- name: Docker remove rootless action
+  when: not container.rootless|d(true) and container.users|d([])|int == 0 or container.podman|d(false)
+  block:
+    - name: Find docker rootless user service
+      find:
+        paths: /etc/systemd/system/
+        patterns: '^docker_[a-z_][a-z0-9_-]*\.service$'
+        use_regex: true
+      register: docker_rootless_services
+    - name: Disable and stop rootless docker runtine
+      ansible.builtin.systemd:
+        name: "{{ docker_rootless_services.path|basename }}"
+        state: stopped
+        enabled: false
+        daemon_reload: yes
+      with_items: "{{ docker_rootless_services.files }}" 
+      loop_control:
+        loop_var: "docker_rootless_services"
+    - name: Remove docker rootless services
+      file:
+        path: "{{ docker_rootless_services.path }}" 
+        state: absent
+      with_items: "{{ docker_rootless_services.files }}" 
+      loop_control:
+        loop_var: "docker_rootless_services"
+    - name: Remove Docker less simple
+      ansible.builtin.file:
+        path: /usr/bin/dockerd-rootless-simple.sh
+        state: absent
+
+- name: Docker
+  package:
+    name: "{{ docker_packages_to_add }}"
+    state: "{{ 'absent' if container.podman|d(false) else 'present' }}"
+- name: Docker-compose
+  pip:
+    name: docker-compose
+    state: "{{ 'absent' if container.podman|d(false) else 'present' }}"
+
+- name: Docker rootless action
+  when: not container.podman|d(false) and (container.rootless|d(true) or container.users|d([])|int > 0)
+  block:
+    - name: Get rootless script
+      copy:
+        src: '{{role_path}}/files/dockerd-rootless-simple.sh'
+        dest: /usr/bin/
+        force: yes
+        group: root
+        owner: root
+        mode: '0755'
+
+    - name: Docker rootless
+      block:
+        - name: Install docker root less and uidmap requirements
+          include_tasks: rootless_docker_user.yml
+          loop: "{{ container.users|d([]) }}"
+          loop_control:
+            loop_var: container_runtime_user

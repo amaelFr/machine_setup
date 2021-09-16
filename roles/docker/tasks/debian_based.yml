@@ -1,0 +1,33 @@
+---
+- name: Get docker prerequis
+  apt:
+    name:
+      - gnupg2
+      - uidmap
+    state: present
+  when: not container.podman|d(false)
+
+- name: Remove docker packages
+  apt:
+    name:
+      - docker
+      - docker-engine
+      - docker.io
+      - containerd
+      - runc
+    state: absent
+
+- name: Docker GPG apt Key
+  apt_key:
+    url: https://download.docker.com/linux/{{ 'ubuntu' if ansible_distribution == 'Ubuntu' else 'debian' }}/gpg
+    state: "{{ 'absent' if container.podman|d(false) else 'present' }}"
+
+- name: Add Docker Repository
+  apt_repository:
+    repo: "deb https://download.docker.com/linux/{{ 'ubuntu' if ansible_distribution == 'Ubuntu' else 'debian' }} {{ ansible_facts['distribution_release'] }} stable"
+    state: "{{ 'absent' if container.podman|d(false) else 'present' }}"
+
+- name: Update apt packages
+  apt:
+    update_cache: true
+    force_apt_get: true
