@@ -1,0 +1,20 @@
+---
+# tasks file for docker
+
+- include_tasks: "{{ ansible_facts['os_family']|lower }}_based.yml"
+
+- name: Install python3-pip
+  package:
+    name:
+      - python3-pip
+    state: present
+
+- import_tasks: docker.yml
+- import_tasks: podman.yml
+
+
+- name: Clean debian based
+  apt:
+    autoremove: yes
+    purge: yes
+  when: ansible_facts['os_family'] == "Debian"

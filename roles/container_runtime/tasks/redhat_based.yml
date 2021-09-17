@@ -11,14 +11,14 @@
         name: "{{ docker_packages_to_remove_redhat_based }}"
         state: absent
 
-- name: Add Docker repo
+- name: Add Docker repository
   get_url:
     url: https://download.docker.com/linux/centos/docker-ce.repo
     dest: /etc/yum.repos.d/docer-ce.repo
-  when: not container.podman|d(false)
+  when: not (container.podman|d(false) or container.uninstall|d(false))
 
 - name: Remove Docker repo
   ansible.builtin.file:
     path: /etc/yum.repos.d/docer-ce.repo
     state: absent
-  when: container.podman|d(false)
+  when: container.podman|d(false) or container.uninstall|d(false)

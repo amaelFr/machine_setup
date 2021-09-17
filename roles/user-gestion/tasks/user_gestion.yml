@@ -6,6 +6,7 @@
         name: "{{ user.group|d(user.name) }}"
         state: present
         gid: "{{ user.gid|d(user.uid)|d(omit) }}"
+        system: "{{ user.system|d(false) }}"
 
     - name: Add the user
       ansible.builtin.user:
@@ -13,11 +14,12 @@
         comment: "{{ user.comment|d(omit) }}"
         uid: "{{ user.uid|d(omit) }}"
         group: "{{ user.group|d(user.name) }}"
-        shell: "{{ user.shell if user.enable|d(true) and user.shell_enable|d(true) and user.shell|d(false) and not user.service|d(false) else '/usr/bin/nologin' }}"
+        shell: "{{ user.shell if user.enable|d(true) and user.shell_enable|d(true) and user.shell|d(false) and not user.system|d(false) else '/usr/bin/nologin' }}"
         home: "{{ user.home|d(omit) }}"
         password: "{{ user.password|d(user.pass)|password_hash('sha512') if user.password is defined or user.pass is defined else omit }}"
-        password_lock: "{{ omit if user.enable|d(true) and not user.service|d(false) else true}}"
+        password_lock: "{{ omit if user.enable|d(true) and not user.system|d(false) else true}}"
         update_password: "{{ 'on_create' if user.update_password|d(false) else omit}}"
+        system: "{{ user.system|d(false) }}"
 
     - name: Add the user to segondary groups
       ansible.builtin.user:
@@ -30,7 +32,7 @@
       when: user.secondary_groups|d(user.s_groups)|d(user.groups)|d(False)
 
     - name: User public ssh keys 
-      when: user.service|d(false)
+      when: user.system|d(false)
       block:
         - name: Find private SSHkeys
           find:

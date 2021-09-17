@@ -1,0 +1,125 @@
+---
+
+- name: Docker remove action
+  # when: not container.rootless|d(true) and container.users|d([])|int == 0 or container.podman|d(false) or container.uninstall|d(false)
+  block:
+    - name: Find docker rootless user service
+      find:
+        paths: /etc/systemd/system/
+        patterns: '^docker_[a-z_][a-z0-9_-]*\.service$'
+        use_regex: true
+      register: docker_rootless_services
+    - name: Disable and stop rootless docker runtine
+      ansible.builtin.systemd:
+        name: "{{ docker_rootless_services.path|basename }}"
+        state: stopped
+        enabled: false
+        daemon_reload: yes
+      with_items: "{{ docker_rootless_services.files }}" 
+      loop_control:
+        loop_var: "docker_rootless_services"
+    - name: Remove docker rootless services
+      file:
+        path: "{{ docker_rootless_services.path }}" 
+        state: absent
+      with_items: "{{ docker_rootless_services.files }}" 
+      loop_control:
+        loop_var: "docker_rootless_services"
+    - name: Remove Docker less simple
+      ansible.builtin.file:
+        path: /usr/bin/dockerd-rootless-simple.sh
+        state: absent
+    - name: Rootless docker actions
+      command: groupmems -l -g docker
+      register: docker_group_users
+      failed_when: 'docker_group_users.rc != 0 and "does not exist in /etc/group" not in docker_group_users.stderr'
+    # - debug:
+    #     var: docker_group_users
+    # - debug:
+    #     var: docker_user
+    #   register: docker_group_users_info
+    #   loop: "{{ docker_group_users.stdout|trim|split('  ') }}"
+    #   loop_control:
+    #     loop_var: docker_user
+    #   when: docker_group_users.stdout != ""
+    - name: get docker users
+      command: gpasswd -d {{ docker_user }} docker
+      register: docker_group_users_info
+      loop: "{{ docker_group_users.stdout|trim|split('  ') }}"
+      loop_control:
+        loop_var: docker_user
+      when: docker_group_users.stdout != ""
+    # - name: get docker users
+    #   ansible.builtin.user:
+    #     name: "{{ docker_user }}"
+    #   register: docker_group_users_info
+    #   loop: "{{ docker_group_users.stdout|trim|split('  ') }}"
+    #   loop_control:
+    #     loop_var: docker_user
+    # - debug:
+    #     var: docker_user.groups
+    #   loop: "{{ docker_group_users_info.results }}"
+    #   loop_control:
+    #     loop_var: docker_user
+    
+
+- name: Docker
+  package:
+    name: "{{ docker_packages_to_add }}"
+    state: "{{ 'absent' if container.podman|d(false) or container.uninstall|d(false) else 'present' }}"
+- name: Docker-compose
+  pip:
+    name: docker-compose
+    state: "{{ 'absent' if container.podman|d(false) or container.uninstall|d(false) else 'present' }}"
+
+- name: Docker install action
+  when: not container.podman|d(false) and not container.uninstall|d(false)
+  block:
+    - name: Container runtime systemd
+      block:
+        - ansible.builtin.systemd:
+            name: docker
+            state: "{{ 'stopped' if container.rootless|d(true) else 'started' }}"
+            enabled: "{{ not container.rootless|d(true) }}"
+      rescue:
+        - name: Reboot server after systemd error
+          reboot:
+            msg: "Reboot initiated by Ansible due to systemd error"
+            connect_timeout: 5
+            reboot_timeout: 3600
+            pre_reboot_delay: 0
+            post_reboot_delay: 30
+            test_command: uptime
+        - name: Container runtime systemd rescue
+          ansible.builtin.systemd:
+            name: docker
+            state: "{{ 'stopped' if container.rootless|d(true) else 'started' }}"
+            enabled: "{{ not container.rootless|d(true) }}"
+
+    - name: Rootless docker actions
+      when: container.rootless|d(true)
+      block:
+        - name: Get rootless script
+          copy:
+            src: '{{role_path}}/files/dockerd-rootless-simple.sh'
+            dest: /usr/bin/
+            force: yes
+            group: root
+            owner: root
+            mode: '0755'
+
+        - name: Install docker root less and uidmap requirements
+          include_tasks: rootless_docker_user.yml
+          loop: "{{ container.users|d([]) }}"
+          loop_control:
+            loop_var: container_runtime_user
+
+    - name: add users to docker group
+      when: not container.rootless|d(true)
+      ansible.builtin.user:
+        name: "{{ docker_user.user|d(docker_user) }}"
+        groups: docker
+        append: true
+      loop: "{{ container.users|d([]) }}"
+      loop_control:
+        loop_var: docker_user

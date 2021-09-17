@@ -8,6 +8,37 @@
 - hosts: all
   become: true
   roles:
-    - user-gestion
+    # - user-gestion
     # - secure-grub
-    - docker
+    - container_runtime
+
+- hosts: all
+  become: true
+  roles:
+    - role: amaelfr.deploy_docker_compose
+      vars:
+        src: https://github.com/amaelFr/enterprise_tools.git
+          # src_branch:
+          # src_commit:
+        name: wiki
+        runtime_user: testdocker
+        files:
+          - wiki/wikijs/docker-compose.yml
+        # command_before_build:
+        # command_on_build: ok
+        # command_build: ok
+        # command_before_start: ok
+        # command_on_start: ok
+        # command_start: ok
+        # command_after_start:
+        #   - destination: keycloak
+        #     user: root
+        #     command: echo "192.168.204.178 ipa.{{ domain.name }}" >> /etc/hosts
+        # command_down: ok
+        # command_clean: ok
+        general_environment: {}
+        #   KEYCLOAK_X509_CA_BUNDLE: /etc/x509/https/root-ca.crt
+        #   DOMAIN: "{{ domain.name }}"
+        #   KEYCLOAK_CERT_SOURCE: ~/ssl/keycloak
+        #   KEYCLOAK_INTERFACE: 192.168.204.178
+        #   KEYCLOAK_HTTPS_PORT: 8443

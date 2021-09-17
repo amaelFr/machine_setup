@@ -1,0 +1,11 @@
+---
+
+- name: Podman
+  package:
+    name:
+      - podman
+    state: "{{ 'absent' if not container.podman|d(false) or container.uninstall|d(false) else 'present' }}"
+- name: Podman-compose
+  pip:
+    name: podman-compose
+    state: "{{ 'absent' if not container.podman|d(false) or container.uninstall|d(false) else 'present' }}"
