@@ -8,7 +8,7 @@
 - name: Get docker user
   getent:
     database: passwd
-    key:  "{{ container_runtime_user.user }}"
+    key:  "{{ container_runtime_user.user|d(container_runtime_user) }}"
   register: container_runtime_user_info
 
 - set_fact:
@@ -66,9 +66,9 @@
 #   environment:
 #     DBUS_SESSION_BUS_ADDRESS: unix:path=/run/user/{{ container_runtime_user_info["ansible_facts"]["getent_passwd"][container_runtime_username][1] }}/bus
 #     XDG_RUNTIME_DIR: /run/user/{{ container_runtime_user_info["ansible_facts"]["getent_passwd"][container_runtime_username][1] }}
-#   register: docker_rootless_in
-#   # failed_when: not 'Installed docker.service successfully.' in docker_rootless_in.stderr
-#   failed_when: not 'Successfully created context' in docker_rootless_in.stderr
+  # register: docker_rootless_in
+  # failed_when: not 'Installed docker.service successfully.' in docker_rootless_in.stderr
+  # failed_when: not 'Successfully created context' in docker_rootless_in.stderr
 
 - name: Disable docker at user level
   become_user: "{{ (container_runtime_user_info['ansible_facts']['getent_passwd']|list)[0] }}"

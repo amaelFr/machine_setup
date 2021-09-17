@@ -8,7 +8,7 @@
 - hosts: all
   become: true
   roles:
-    # - user-gestion
+    - user-gestion
     # - secure-grub
     - container_runtime
 
@@ -36,7 +36,8 @@
         #     command: echo "192.168.204.178 ipa.{{ domain.name }}" >> /etc/hosts
         # command_down: ok
         # command_clean: ok
-        general_environment: {}
+        # general_environment:
+        #   DOCKER_HOST: unix:///run/user/280/docker.sock
         #   KEYCLOAK_X509_CA_BUNDLE: /etc/x509/https/root-ca.crt
         #   DOMAIN: "{{ domain.name }}"
         #   KEYCLOAK_CERT_SOURCE: ~/ssl/keycloak
