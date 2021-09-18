@@ -8,20 +8,20 @@
 - hosts: all
   become: true
   roles:
-    - user-gestion
+    # - user-gestion
     # - secure-grub
-    - container_runtime
+    # - container_runtime
 
 - hosts: all
   become: true
   roles:
     - role: amaelfr.deploy_docker_compose
-      vars:
+      vars: # add runtime_user to discover dockersocket !!!! when DOCKER_HOST not set
         src: https://github.com/amaelFr/enterprise_tools.git
           # src_branch:
           # src_commit:
         name: wiki
-        runtime_user: testdocker
+        # runtime_user: testdocker
         files:
           - wiki/wikijs/docker-compose.yml
         # command_before_build:
@@ -36,6 +36,7 @@
         #     command: echo "192.168.204.178 ipa.{{ domain.name }}" >> /etc/hosts
         # command_down: ok
         # command_clean: ok
+        # use_runtime_user_socket: true
         # general_environment:
         #   DOCKER_HOST: unix:///run/user/280/docker.sock
         #   KEYCLOAK_X509_CA_BUNDLE: /etc/x509/https/root-ca.crt
