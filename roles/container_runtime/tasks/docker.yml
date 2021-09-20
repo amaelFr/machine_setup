@@ -1,7 +1,6 @@
 ---
 
 - name: Docker remove action
-  # when: not container.rootless|d(true) and container.users|d([])|int == 0 or container.podman|d(false) or container.uninstall|d(false)
   block:
     - name: Find docker rootless user service
       find:
@@ -96,6 +95,19 @@
             state: "{{ 'stopped' if container.rootless|d(true) else 'started' }}"
             enabled: "{{ not container.rootless|d(true) }}"
 
+    - name: Prepare runtime users variable
+      block:
+        - set_fact:
+            runtime_users_to_set: "{{ container.users }}"
+          when: container.users[0] is mapping
+        - set_fact:
+            runtime_users_to_set: "{{ runtime_users_to_set|d([]) + lookup('vars', runtime_user_alias_var, default=[]) }}"
+          loop: "{{ container.users  }}"
+          loop_control:
+            loop_var: runtime_user_alias_var
+          when: container.users[0] is string
+      when: container.users|d([])|length>0
+
     - name: Rootless docker actions
       when: container.rootless|d(true)
       block:
@@ -110,7 +122,7 @@
 
         - name: Install docker root less and uidmap requirements
           include_tasks: rootless_docker_user.yml
-          loop: "{{ container.users|d([]) }}"
+          loop: "{{ runtime_users_to_set|d([]) }}"
           loop_control:
             loop_var: container_runtime_user
 
@@ -120,7 +132,7 @@
         name: "{{ docker_user.user|d(docker_user) }}"
         groups: docker
         append: true
-      loop: "{{ container.users|d([]) }}"
+      loop: "{{ runtime_users_to_set|d([]) }}"
       loop_control:
         loop_var: docker_user
     

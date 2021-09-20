@@ -1,9 +1,26 @@
 ---
 # tasks file for user-gestion
 
+
+- name: Prepare users variable
+  block:
+    - set_fact:
+        users_to_set: "{{ users }}"
+      when: users[0] is mapping
+    - set_fact:
+        users_to_set: "{{ users_to_set|d([]) + lookup('vars', user_alias_var, default=[]) }}"
+      loop: "{{ users  }}"
+      loop_control:
+        loop_var: user_alias_var
+      when: users[0] is string
+  when: users|d([])|length>0
+
+- debug:
+    var: users_to_set
+
 - name: Add users and groups
   include: user_gestion.yml
-  loop: "{{ users }}"
+  loop: "{{ users_to_set }}"
   loop_control:
     loop_var: user
-  when: users|d(False)
+  when: users_to_set|d(False)

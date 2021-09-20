@@ -1,0 +1,26 @@
+---
+# tasks file for backup
+
+# action: != 'restore' => backup
+# src: path/volume_name/database
+# type: standart_fs(default)/container_volume/container_mysql/container_postgresql
+# container_user: only for container_* option -u
+
+- import_tasks: vars_set.yml
+
+
+- when: action != 'restore'
+  block:
+    - when: backup_dir is not defined
+      fail:
+        msg: Error you must provide a backup_dir to backup operation
+    - import_tasks: backup.yml
+      environment: "{{ backup_restore_environment_modified|d(omit) }}"
+
+- when: action == 'restore'
+  block:
+    - when: restore_dir is not defined
+      fail:
+        msg: Error you must provide a restore_dir to restore operation
+    - import_tasks: restore.yml
+      environment: "{{ backup_restore_environment_modified|d(omit) }}"

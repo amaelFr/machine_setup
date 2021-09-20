@@ -1,0 +1,30 @@
+---
+
+- hosts: wiki
+  tasks:
+    - set_fact:
+        backup_dir: "{{ backup_base_dir|d(inventory_dir+'/backup') }}/{{ ansible_date_time.date }}_{{ ansible_date_time.time|replace(':', '-') }}/{{ inventory_hostname }}"
+    - name: Create local directory
+      local_action:
+        module: ansible.builtin.file
+        path: "{{ backup_dir }}"
+        state: directory
+
+- hosts: wiki
+  become: true
+  become_user: wiki
+  roles:
+    - role: backup_restore
+      vars:
+        action: backup
+        type: container_volume
+        src: wiki_db-data
+        # backup_restore_environment: {}
+        backup_dir: "{{ backup_dir }}"
+    - role: backup_restore
+      vars:
+        action: backup
+        type: container_postgresql
+        src: wiki-db
+        # backup_restore_environment: {}
+        backup_dir: "{{ backup_dir }}"

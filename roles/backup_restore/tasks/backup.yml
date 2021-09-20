@@ -1,0 +1,43 @@
+---
+- name: Container volume backup
+  when: not action_done and backup_type == "container_volume"
+  block:
+    - shell:
+        cmd: docker run --rm -v {{ backup_name }}:/volume -v /tmp:/backup alpine tar -cjf /backup/backup.tar.bz2 -C /volume ./
+    - set_fact:
+        action_done: true
+
+- name: Container MYSQL MARIADB backup
+  when: not action_done and backup_type == "container_MSQL"
+  block:
+    - shell:
+        cmd: (docker exec -it {{ backup_name }} sh -c "/usr/bin/mysqldump -u \${MYSQL_USER} --password=\${MYSQL_PASSWORD} \${MYSQL_DATABASE}") | bzip2 -c > /tmp/backup.sql.bz2
+    - set_fact:
+        action_done: true
+
+- name: Container POSTGRES backup
+  when: not action_done and backup_type == "container_POSTGRESQL"
+  block:
+    - shell:
+        cmd: ( echo -e "DROP SCHEMA public CASCADE;\nCREATE SCHEMA public;\n" && docker exec -it {{ backup_name }} sh -c "pg_dumpall -c -U \${POSTGRES_USER}" ) | bzip2 -c > /tmp/backup.sql.bz2
+    - set_fact:
+        action_done: true
+
+- name: Basic files sytem backup
+  when: not action_done and backup_type == "basic_FS"
+  block:
+    - shell:
+        cmd: tar -cjf /tmp/backup.tar.bz2 -C "{{ backup_name }}"
+    - set_fact:
+        action_done: true
+
+- name: Retrieveing backup
+  ansible.builtin.fetch:
+    src: /tmp/backup.{{ backup_ext }}
+    dest: "{{ backup_dir }}/{{ backup_type }}_{{ backup_name }}.{{ backup_ext }}"
+
+
+- name: Remove backups from server
+  file:
+    path: /tmp/backup.{{ backup_ext }}
+    state: absent

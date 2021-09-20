@@ -1,0 +1,5 @@
+---
+# defaults file for backup
+type: local
+action: backup
+backup_restore_environment: {}

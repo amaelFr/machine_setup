@@ -1,0 +1,45 @@
+---
+
+- set_fact:
+    backup_restore_environment_modified: "{{ backup_restore_environment }}"
+- name: Add DOCKER_HOST to backup_restore_environment if present for current user
+  when: "'container_' in type and'DOCKER_HOST' not in backup_restore_environment and use_user_runtime_socket|d(true)" 
+  block:
+    - name: Get docker user
+      register: runtime_user_info
+      getent:
+        database: passwd
+        key:  "{{ ansible_user_id }}"
+    - register: runtime_socket_info
+      stat:
+        path: "/run/user/{{ runtime_user_info['ansible_facts']['getent_passwd'][(runtime_user_info['ansible_facts']['getent_passwd']|list)[0]][1] }}/docker.sock"
+    - when: runtime_socket_info.stat.exists
+      set_fact:
+        backup_restore_environment_modified: "{{ backup_restore_environment|combine( { 'DOCKER_HOST': 'unix:///run/user/'+runtime_user_info['ansible_facts']['getent_passwd'][(runtime_user_info['ansible_facts']['getent_passwd']|list)[0]][1]+'/docker.sock' } )}}"
+
+
+- set_fact:
+    action_done: false
+    backup_name: false
+    backup_type: false
+    backup_ext: false
+- when: not backup_name|d(false) and ( type == 'container_volume' or type == 'container_vol' or type == 'docker_volume' or type == 'docker_vol')
+  set_fact:
+    backup_ext: tar.bz2
+    backup_type: container_volume
+    backup_name: "{{ src_volume|d(src_container_volume)|d(src) }}"
+- when: not backup_name|d(false) and ( type == 'container_mysql' or type == 'container_mariadb' or type == 'docker_mysql' or type == 'docker_mariadb')
+  set_fact:
+    backup_ext: sql.bz2
+    backup_type: container_MSQL
+    backup_name: "{{ src_container|d(src) }}"
+- when: not backup_name|d(false) and ( type == 'container_postgre' or type == 'container_postgres' or type == 'container_postgresql' or type == 'docker_postgre' or type == 'docker_postgres' or type == 'docker_postgresql')
+  set_fact:
+    backup_ext: sql.bz2
+    backup_type: container_POSTGRESQL
+    backup_name: "{{ src_container|d(src) }}"
+- when: not backup_name|d(false)
+  set_fact:
+    backup_ext: tar.bz2
+    backup_type: basic_FS
+    backup_name: "{{ src|basename }}"
