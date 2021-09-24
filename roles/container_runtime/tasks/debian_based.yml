@@ -7,6 +7,14 @@
     state: present
   when: not (container.podman|d(false) or container.uninstall|d(false))
 
+# # 
+# - name: debian 10 compatibility
+#   when: ansible_distribution == 'Debian' and ansible_facts['distribution_major_version'] < 11 or ansible_distribution == 'Ubuntu' and ansible_facts['distribution_major_version'] < 20.04
+#   apt:
+#     name:
+#       - slirp4netns
+#     state: present
+
 - name: Remove docker packages
   apt:
     name:

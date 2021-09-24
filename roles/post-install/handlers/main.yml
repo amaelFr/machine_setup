@@ -7,6 +7,8 @@
     state: restarted
 
 - name: Reboot server
+  become: true
+  become_user: root
   reboot:
     msg: "Reboot initiated by Ansible for kernel updates"
     connect_timeout: 5

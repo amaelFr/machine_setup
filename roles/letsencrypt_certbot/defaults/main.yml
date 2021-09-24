@@ -1,0 +1,4 @@
+---
+# defaults file for letsencrypt
+certbot_domains: []
+certbot_plugins: []

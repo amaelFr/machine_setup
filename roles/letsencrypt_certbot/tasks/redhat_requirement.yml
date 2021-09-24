@@ -1,0 +1,24 @@
+---
+- name: Get necessary package epel
+  block:
+    - name: EPEL for REHL <= 7 based
+      block:
+        - package:
+            name: epel-release
+            state: latest
+      rescue:
+        - name: Enable fedora EPEL
+          block:
+            - rpm_key:
+                key: http://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-{{ ansible_facts['distribution_major_version'] }}
+                state: present
+            - name: Enable fedora EPEL REHL <=7
+              yum:
+                name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_facts['distribution_major_version'] }}.noarch.rpm
+                state: present
+              when: ansible_facts['distribution_major_version'] <= '7'
+            - name: Enable fedora EPEL REHL >=8
+              dnf:
+                name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_facts['distribution_major_version'] }}.noarch.rpm
+                state: present
+              when: ansible_facts['distribution_major_version'] >= '8'

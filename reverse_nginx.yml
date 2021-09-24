@@ -1,0 +1,20 @@
+---
+- hosts: reverse_nginx
+  become: true
+  roles:
+    - role: amaelfr.deploy_docker_compose
+      vars: # add runtime_user to discover dockersocket !!!! when DOCKER_HOST not set
+        src: ~/documents/enterprise_tools/nginx/
+          # src_branch:
+          # src_commit:
+        name: reverse_nginx
+        runtime_user: "{{ reverse_nginx_service_user|d(omit) }}"
+        files:
+          - docker-compose.yml
+          - docker-compose.NGINX_HTTPS.yml
+        # use_runtime_user_socket: true
+        general_environment:
+          NGINX_INTERFACE: "{{ reverse_nginx_interface|d(omit) }}"
+          NGINX_HTTP_PORT: "{{ reverse_nginx_http_port|d(omit) }}"
+          NGINX_HTTPS_PORT: "{{ reverse_nginx_https_port|d(omit) }}"
+          NGINX_CERTIFICATE: "{{ reverse_nginx_certificate|d(omit) }}"

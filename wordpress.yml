@@ -1,0 +1,19 @@
+---
+- hosts: wordpress
+  become: true
+  roles:
+    - role: amaelfr.deploy_docker_compose
+      vars: # add runtime_user to discover dockersocket !!!! when DOCKER_HOST not set
+        src: https://github.com/amaelFr/enterprise_tools.git
+          # src_branch:
+          # src_commit:
+        name: wordpress
+        runtime_user: "{{ wordpress_service_user|d(omit) }}"
+        files:
+          - wordpress/docker-compose.yml
+          - wordpress/docker-compose.MYSQL.yml
+        # use_runtime_user_socket: true
+        # container_remove_volume: true
+        general_environment:
+          WP_INTERFACE: "{{ wordpress_interface|d(omit) }}"
+          WP_PORT: "{{ wordpress_port|d(omit) }}"

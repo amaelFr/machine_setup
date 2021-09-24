@@ -7,25 +7,53 @@ ntp:
 
 dynamic_motd: true
 
-packages:
-  to_remove:
-    all:
-      - telnet
-    server: 
-      - task-laptop
-      # mlocate rsync htop net-tools vim tmux zip pigz pixz iotop git psmisc
-      # tree lynx at postfix lshw inxi figlet gdisk mc cifs-utils ntfs-3g sudo curl
-      # sshfs apt-file openssl gnupg2 dnsutils fish gpm grc postfix ncdu p7zip-full
-      # parted
-    desktop: []
-    custom: []
-  to_install:
-    all:
-      - vim
-      - tmux
-      - git
-    server: []
-    desktop: []
-    custom: []
+packages_install: 
+  - vim
+  - tmux
+  - git
+  - python3-pip
+packages_remove:
+  - telnet
+
+packages_install_custom: []
+packages_remove_custom: []
+
+packages_install_server: []
+packages_remove_server:
+  - task-laptop
+# mlocate rsync htop net-tools vim tmux zip pigz pixz iotop git psmisc
+# tree lynx at postfix lshw inxi figlet gdisk mc cifs-utils ntfs-3g sudo curl
+# sshfs apt-file openssl gnupg2 dnsutils fish gpm grc postfix ncdu p7zip-full
+# parted
+
+packages_install_desktop: []
+packages_remove_desktop: []
+
+
+debian_packages_install: []
+  # - selinux-basics
+  # - selinux-utils
+  # - selinux-policy-default
+  # - policycoreutils
+  # - python3-selinux
+redhat_packages_install: []
+debian_packages_remove: []
+  # - apparmor
+redhat_packages_remove: []
+
+debian_packages_install_custom: []
+redhat_packages_install_custom: []
+debian_packages_remove_custom: []
+redhat_packages_remove_custom: []
+
+debian_packages_install_server: []
+redhat_packages_install_server: []
+debian_packages_remove_server: []
+redhat_packages_remove_server: []
+
+debian_packages_install_desktop: []
+redhat_packages_install_desktop: []
+debian_packages_remove_desktop: []
+redhat_packages_remove_desktop: []
 
 deploy_current_ssh_key: true

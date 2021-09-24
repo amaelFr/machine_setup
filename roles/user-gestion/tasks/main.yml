@@ -15,11 +15,8 @@
       when: users[0] is string
   when: users|d([])|length>0
 
-- debug:
-    var: users_to_set
-
 - name: Add users and groups
-  include: user_gestion.yml
+  include_tasks: user_gestion.yml
   loop: "{{ users_to_set }}"
   loop_control:
     loop_var: user

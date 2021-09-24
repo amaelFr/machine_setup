@@ -9,8 +9,8 @@
 
 - include_vars: "{{ role_path }}/vars/{{ ansible_facts['os_family']|lower }}_based.yml"
 
-# - import_tasks: ssh_authorized_key.yml
-#   when: deploy_current_ssh_key
+- import_tasks: ssh_authorized_key.yml
+  when: deploy_current_ssh_key
 
 - import_tasks: root.yml
   become: true

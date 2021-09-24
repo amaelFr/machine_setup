@@ -21,6 +21,8 @@
     - docker
     - wiki
     - wordpress
+    - reverse_nginx
   become: true
   roles:
-    - docker
+    - container_runtime
+

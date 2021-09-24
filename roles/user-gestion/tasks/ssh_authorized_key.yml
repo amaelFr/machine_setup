@@ -2,30 +2,13 @@
 - set_fact:
     authorized_key_value: '{{ authorized_key.value if authorized_key is mapping else authorized_key }}'
 
-- name: Check if local public key exist
-  block:
-    - local_action:
-        module: stat
-        path: '{{ authorized_key_value }}'
-      register: authorized_key_stat
-    - block:
-        - local_action:
-            module: stat
-            path: '{{ inventory_dir }}/{{ authorized_key_value }}'
-          register: authorized_key_stat_inv
-        - set_fact:
-            authorized_key_stat: '{{ authorized_key_stat_inv }}'
-          when: authorized_key_stat_inv.stat.exists
-      when: not authorized_key_value|regex_search('^\/')
-  when: not authorized_key_value|regex_search(ssh_regex)
-
 - name: Invalid SSHkey
   fail:
     msg: Invalid SSHkey {{ authorized_key_value }}
-  when: not authorized_key_value|regex_search(ssh_regex) and authorized_key_stat.stat.exists and not ( lookup('file', authorized_key_stat.stat.path)|regex_search(ssh_regex))
+  when: not authorized_key_value|regex_search(ssh_regex) and not ( lookup('file', authorized_key_value)|regex_search(ssh_regex))
 
 - ansible.posix.authorized_key:
     user: '{{ user.name }}'
     state: '{{ "absent" if authorized_key.remove|d(False) else "present" }}'
-    key: '{{ authorized_key_value if authorized_key_value|regex_search(ssh_regex) else lookup("file", authorized_key_stat.stat.path) }}'
+    key: '{{ authorized_key_value if authorized_key_value|regex_search(ssh_regex) else lookup("file", authorized_key_value) }}'
     manage_dir: yes

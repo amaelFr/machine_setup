@@ -23,7 +23,7 @@
     loop_var: subuid
 
 - set_fact:
-    high_subuid: "{{ subgid[1]|int + subgid[2]|int }}"
+    high_subgid: "{{ subgid[1]|int + subgid[2]|int }}"
   when: ((subgid[1]|int) + (subgid[2]|int)) > high_subgid|int
   loop: "{{ subgid_list }}"
   loop_control:

@@ -1,0 +1,21 @@
+---
+# tasks file for letsencrypt
+- become: true
+  become_user: root
+  block:
+    - import_tasks: "redhat_requirement.yml"
+      when: ansible_facts['os_family'] == "Redhat"
+
+    - name: Add the certbot package
+      package:
+        name: certbot
+        state: latest
+
+    - name: Add certbot plugin packages
+      package:
+        name: "{{ certbot_plugin if 'certbot' in certbot_plugin else 'python3-certbot-'+certbot_plugin }}"
+      when: certbot_plugins_packages|d(certbot_plugins)|d(false)
+      loop: "{{ certbot_plugins_packages|d(certbot_plugins) }}"
+      loop_control:
+        loop_var: certbot_plugin
+    

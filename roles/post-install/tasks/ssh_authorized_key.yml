@@ -4,7 +4,7 @@
     local_action:
       module: find
       paths: ~/.ssh
-      patterns: "^id_[a-z0-9]*.pub$"
+      patterns: '^id_[a-z0-9]+\.pub$'
       use_regex: yes
     register: pubKeyFiles
   - name: Error getting public key zero or more than one are present

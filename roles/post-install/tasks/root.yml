@@ -1,160 +1,193 @@
 ---
 
-# - name: Change hostname
-#   block:      
-#     - name: Replace hostname /etc/hosts
-#       ansible.builtin.replace:
-#         path: /etc/hosts
-#         regexp: '({{ ansible_facts["hostname"] }})'
-#         replace: '{{ hostname|d(inventory_hostname) }}'
-#       register: replace_hosts
-#     - name: Add hostname to /etc/hosts
-#       lineinfile:
-#         path: /etc/hosts
-#         line: 127.0.0.1 {{ hostname|d(inventory_hostname) }}
-#       when: not replace_hosts.changed and hostname|d(inventory_hostname) != ansible_facts["hostname"]
-#     - name: Set hostname
-#       ansible.builtin.hostname:
-#         name: '{{ hostname|d(inventory_hostname) }}'
-#   when: ( not hostname|d(inventory_hostname)|regex_search('^((2((5[0-5])|([0-4][0-9]))|[0-1]?[0-9]{1,2}).){3}(2((5[0-5])|([0-4][0-9]))|[0-1]?[0-9]{1,2})$') ) and hostname|d(inventory_hostname) != ansible_facts['hostname']
-
-
-
-# - name: Detect if system use GUI
-#   stat:
-#     path: /usr/share/xsessions
-#   register: xsessions
-
-
-# # - name: Remove unecessary packages if security level > -1
-# #   package:
-# #     name: '{{ packages.to_remove.all + packages.to_remove.custom + ( packages.to_remove.desktop if xsessions.stat.exists else packages.to_remove.server ) }}'
-# #     state: absent
-# #   when: machine_level > -1
-# - name: Remove unecessary packages
-#   package:
-#     name: '{{ packages.to_remove.all + packages.to_remove.custom + ( packages.to_remove.desktop if xsessions.stat.exists else packages.to_remove.server ) }}'
-#     state: absent
-
-
-# - name: Upgrade all Debian based
-#   block:
-#     - name: Update apt repo and cache
-#       apt:
-#         update_cache: yes
-#         force_apt_get: yes
-#     - name: Upgrade all packages
-#       apt:
-#         upgrade: dist
-#         force_apt_get: yes
-#     - name: Check if a reboot is required
-#       stat:
-#         path: /var/run/reboot-required
-#         get_md5: no
-#       register: reboot_required_file
-#       changed_when: reboot_required_file.stat.exists
-#       notify:
-#         - Reboot server
-#   when: ansible_facts['os_family'] == 'Debian'
-
-# - name: Upgrade all RHEL based
-#   block:
-#     - when: ansible_facts ['distribution_major_version'] < '8'
-#       block:
-#         - yum:
-#             name: '*'
-#             state: latest
-#             update_cache: yes
-#             update_only: no
-#         - yum:
-#             name: yum-utils
-#             state: latest
-#             update_cache: yes
-#     - when: ansible_facts ['distribution_major_version'] >= '8'
-#       block:
-#         - dnf:
-#             name: '*'
-#             state: latest
-#             update_cache: yes
-#             update_only: no
-#         - dnf:
-#             name: dnf-utils
-#             state: latest
-#             update_cache: yes
-#     - name: Check if a reboot is required
-#       command: needs-restarting -r
-#       register: reboot_required
-#       ignore_errors: yes
-#       failed_when: false
-#       changed_when: reboot_required.rc != 0
-#       notify:
-#         - Reboot server
-#   when: ansible_facts['os_family'] == 'RedHat'
-
-# - set_fact:
-#     packages_to_install: '{{ packages.to_install.all + packages.to_install.custom + ( packages.to_install.desktop if xsessions.stat.exists else packages.to_install.server ) }}'
-
-# - name: Add packages
-#   # apt:
-#   #   pkg:
-#   package:
-#     name: '{{ packages_to_install }}'
-
-
-# - name: Enable vim as default editor
-#   block:
-#     - ansible.builtin.file:
-#         path: /etc/alternatives/editor
-#         state: absent
-#     - file:
-#         src: /usr/bin/vim # /usr/bin/vim.basic not disponible on RHEL based
-#         dest: /etc/alternatives/editor
-#         state: link
-#   when: '"vim" in {{ packages_to_install }}'
-
-
-- name: Remove motd files
-  file:
-    path: /etc/{{ item }}
-    state: absent
-  loop:
-    - update-motd.d
-    - motd
-
-- name: Directory system customization
+- name: Change hostname
   block:
-    - copy:
-        src: '{{role_path}}/files/{{ item }}'
-        dest: '/etc/'
-        force: yes
-        group: root
-        owner: root
-        mode: preserve
-        mode: '0755'
-      loop:
-        - skel
-        - default
-        - update-motd.d
-    - local_action:
-        module: find
-        path: '{{role_path}}/files/{{ item }}'
-        recurse: yes
-      register: conf_files
-      loop:
-        - skel
-        - default
-        - update-motd.d/colors
-    - debug:
-        # var: conf_files.results
-        var: conf_files.results|map(attribute='files')
-        # var: query('subelements', conf_files.results, 'files')
-        # with_subelements ??
-    # - file:
-    #     path: /etc/{{ item }}
-    #     owner: root
-    #     group: root
-    #     mode: '0544'
-    #   loop:
+    - name: Replace hostname /etc/hosts
+      ansible.builtin.replace:
+        path: /etc/hosts
+        regexp: '( {{ ansible_facts["hostname"] }}( |$))'
+        replace: ' {{ hostname|d(inventory_hostname) }} '
+      register: replace_hosts
+    - name: Add hostname to /etc/hosts
+      lineinfile:
+        path: /etc/hosts
+        line: 127.0.0.1 {{ hostname|d(inventory_hostname) }}
+      when: not replace_hosts.changed
+    - name: Set hostname
+      ansible.builtin.hostname:
+        name: '{{ hostname|d(inventory_hostname) }}'
+  when: (not hostname|d(inventory_hostname)|regex_search('^((2((5[0-5])|([0-4][0-9]))|[0-1]?[0-9]{1,2}).){3}(2((5[0-5])|([0-4][0-9]))|[0-1]?[0-9]{1,2})$') ) and hostname|d(inventory_hostname) != ansible_facts['hostname']
+
+
+
+- name: Detect if system use GUI
+  stat:
+    path: /usr/share/xsessions
+  register: xsessions
+
+- set_fact: ## can t get selinux necessary here
+    packages_to_remove: |
+      {{
+          packages_remove + packages_remove_custom +
+          lookup('vars', ansible_facts['os_family']|lower+'_packages_remove', default=[]) +
+          lookup('vars', ansible_facts['os_family']|lower+'_packages_remove_custom', default=[]) +
+          (
+            packages_remove_desktop + lookup('vars', ansible_facts['os_family']|lower+'_packages_remove_desktop', default=[])
+              if xsessions.stat.exists else
+            packages_remove_server + lookup('vars', ansible_facts['os_family']|lower+'_packages_remove_server', default=[])
+          )
+      }}
+
+- name: Remove unecessary packages
+  package:
+    name: '{{ packages_to_remove }}'
+    state: absent
+
+
+- name: Upgrade all Debian based
+  block:
+    - name: Update apt repo and cache
+      apt:
+        update_cache: yes
+        force_apt_get: yes
+    - name: Upgrade all packages
+      apt:
+        upgrade: dist
+        force_apt_get: yes
+    - name: Check if a reboot is required
+      stat:
+        path: /var/run/reboot-required
+        get_md5: no
+      register: reboot_required_file
+      changed_when: reboot_required_file.stat.exists
+      notify:
+        - Reboot server
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Upgrade all RHEL based
+  block:
+    - when: ansible_facts ['distribution_major_version'] < '8'
+      block:
+        - yum:
+            name: '*'
+            state: latest
+            update_cache: yes
+            update_only: no
+        - yum:
+            name: yum-utils
+            state: latest
+            update_cache: yes
+    - when: ansible_facts ['distribution_major_version'] >= '8'
+      block:
+        - dnf:
+            name: '*'
+            state: latest
+            update_cache: yes
+            update_only: no
+        - dnf:
+            name: dnf-utils
+            state: latest
+            update_cache: yes
+    - name: Check if a reboot is required
+      command: needs-restarting -r
+      register: reboot_required
+      ignore_errors: yes
+      failed_when: false
+      changed_when: reboot_required.rc != 0
+      notify:
+        - Reboot server
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- set_fact: ## can t get selinux necessary here
+    packages_to_install: |
+      {{
+          packages_install + packages_install_custom +
+          lookup('vars', ansible_facts['os_family']|lower+'_packages_install', default=[]) +
+          lookup('vars', ansible_facts['os_family']|lower+'_packages_install_custom', default=[]) +
+          (
+            packages_install_desktop + lookup('vars', ansible_facts['os_family']|lower+'_packages_install_desktop', default=[])
+              if xsessions.stat.exists else
+            packages_install_server + lookup('vars', ansible_facts['os_family']|lower+'_packages_install_server', default=[])
+          )
+      }}
+
+
+- name: Add packages
+  package:
+    name: '{{ packages_to_install }}'
+
+- name: install the package, force upgrade
+  pip:
+    name: pip
+    executable: pip3
+    state: latest
+
+- name: Enable vim as default editor
+  block:
+    - ansible.builtin.file:
+        path: /etc/alternatives/editor
+        state: absent
+    - file:
+        src: /usr/bin/vim # /usr/bin/vim.basic not disponible on RHEL based
+        dest: /etc/alternatives/editor
+        state: link
+  when: '"vim" in {{ packages_to_install }}'
+
+
+
+# - name: Install selinux python module
+#   pip:
+#     name: selinux
+#     state: present
+# - name: Create SELinux state enforcing
+#   command: selinux-config-enforcing
+# - name: Enforcing SELinux
+#   selinux:
+#     state: enforcing
+#     policy: targeted
+
+# - name: Remove motd files
+#   file:
+#     path: /etc/{{ item }}
+#     state: absent
+#   loop:
+#     - update-motd.d
+#     - motd
+
+# - name: Directory system customization
+#   block:
+#     - copy:
+#         src: '{{role_path}}/files/{{ item }}'
+#         dest: '/etc/'
+#         force: yes
+#         group: root
+#         owner: root
+#         mode: preserve
+#         mode: '0755'
+#       loop:
+#         - skel
+#         - default
+#         - update-motd.d
+#     - local_action:
+#         module: find
+#         path: '{{role_path}}/files/{{ item }}'
+#         recurse: yes
+#       register: conf_files
+#       loop:
+#         - skel
+#         - default
+#         - update-motd.d/colors
+#     - debug:
+#         # var: conf_files.results
+#         var: conf_files.results|map(attribute='files')
+#         # var: query('subelements', conf_files.results, 'files')
+#         # with_subelements ??
+#     # - file:
+#     #     path: /etc/{{ item }}
+#     #     owner: root
+#     #     group: root
+#     #     mode: '0544'
+#     #   loop:
     
 
 
@@ -185,4 +218,4 @@
 #     - src: issue
 #       dest: issue.net
 
-# - import_tasks: chrony.yml
+- import_tasks: chrony.yml
