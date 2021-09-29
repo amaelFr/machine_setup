@@ -18,3 +18,82 @@
 #   become: true
 #   roles:
 #     - container_runtime
+
+- hosts: all
+  roles:
+    - openssl_PKI
+  vars:
+    root_ca:
+      - name: root
+        delete: true
+        # key_pass: "root"
+        intermediate_ca:
+          - name: elastic
+            certificate:
+              - name: elastic-master
+                type: serv_auth
+              - name: elastic
+                type: serv_auth
+          - name: kafka
+            intermediate_ca:
+              - name: recurse_ca
+        # certificates:
+    # intermediate_ca:
+    #   - name:
+    #     ca_key_path:
+    #     ca_key_pass:
+    #     ca_cert_path:
+    # certificate:
+    #   - name:
+    #     type:
+    #     ca_key_path:
+    #     ca_key_pass:
+    #     ca_cert_path:
+    # selfsigned:
+    #   - name: 
+    #     type:
+
+    # # base_path:
+    # subca_default_signatory:
+    #   type: ca # subca
+    #   name: root
+    #   # type: custom
+    #   # key_path: ...privkey.pem
+    #   # key_pass: ....
+    #   # cert_path: ...cert.pem
+    # certificates:
+    #   - type: ca
+    #     cert_name: root
+    #   - type: subca
+    #     # remove: false
+    #     cert_name: elastic
+
+    #     # signatory:
+    #     #   type: ca
+    #     #   name: root
+    #     # type: custom
+    #     # key_path: ...privkey.pem
+    #     # key_pass: ....
+    #     # cert_path: ...cert.pem
+
+    #     # cert_country_code:
+    #     # cert_country:
+    #     # cert_locality:
+    #     # cert_organisation:
+    #     # cert_organisational_unit:
+    #     # cert_subj:
+    #     # cert_subj_alt:
+    #     # cert_email:
+    #     # cert_digest:
+    #     # cert_ocsp_staple:
+    #     # cert_ocsp_staple_crt:
+
+    #     # key_usage:
+    #     # key_usage_crt:
+    #     # key_ext_usage:
+    #     # key_ext_crt:
+    #     # key_cipher:
+    #     # key_curve:
+    #     # key_pass:
+    #     # key_size:
+    #     # key_type:

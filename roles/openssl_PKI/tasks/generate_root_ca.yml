@@ -1,0 +1,64 @@
+---
+# new_key_cert_options:
+#   type: root_ca = self_signed), other = root_ca/SUB_root_ca signed)
+#   remove:
+  
+#   cert_name:
+#   cert_country_code:
+#   cert_country:
+#   cert_locality:
+#   cert_organisation:
+#   cert_organisational_unit:
+#   cert_subj:
+#   cert_subj_alt:
+#   cert_email:
+#   cert_digest:
+#   cert_ocsp_staple:
+#   cert_ocsp_staple_crt:
+
+#   key_usage:
+#   key_usage_crt:
+#   key_ext_usage:
+#   key_ext_crt:
+#   key_cipher:
+#   key_curve:
+#   key_pass:
+#   key_size:
+#   key_type:
+
+
+- name: Create root CA certificate
+  block:
+    - set_fact:
+        ca_key_cert_options: "{{ 
+          root_ca_key_cert_options|combine(
+              { 'key_usage': ['keyCertSign', 'cRLSign'],
+                'key_usage_crt': true,
+                'key_ext_usage': [],
+                'key_ext_usage_crt': false,
+                'cert_CN_to_san': false,
+                'cert_constraints_crt': true,
+                'cert_constraints': [ 'CA:TRUE', 'pathlen:0'],
+                'cert_add_SKI': true,
+                'name': root_ca_key_cert_options.cert_common_name|d(root_ca_key_cert_options.cert_name)|d(root_ca_key_cert_options.name)
+              })|combine(
+              {
+                'key_pass': root_ca_key_cert_options.key_pass|d(root_ca_key_cert_options.key_passphrase)|d(root_ca_key_cert_options.key_password)
+              } if root_ca_key_cert_options.key_pass|d(root_ca_key_cert_options.key_passphrase)|d(root_ca_key_cert_options.key_password)|d(false) else {})|combine(
+              {
+                'base_path': certificates_base_path+'/intermediate-ca/'+root_ca_key_cert_options.cert_common_name|d(root_ca_key_cert_options.cert_name)|d(root_ca_key_cert_options.name)
+              } if not root_ca_key_cert_options.base_path|d(false) else {})
+          }}" 
+    - set_fact:
+        new_key_cert_options: "{{ ca_key_cert_options }}"
+    - include_tasks: generate_csr.yml
+    - name: Sign root CA certificate request
+      local_action:
+        module: community.crypto.x509_certificate
+        select_crypto_backend: cryptography
+        path: "{{ ca_key_cert_options.base_path }}/cert.pem"
+        csr_path: "{{ new_key_cert_options.base_path }}/csr.pem"
+        provider: selfsigned
+        privatekey_path: "{{ ca_key_cert_options.base_path }}/privkey.pem"
+        privatekey_passphrase: "{{ ca_key_cert_options.key_pass|d(omit) }}"
+    - import_tasks: ca_operation.yml

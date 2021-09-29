@@ -91,9 +91,12 @@
             test_command: uptime
         - name: Container runtime systemd rescue
           ansible.builtin.systemd:
-            name: docker
+            name: "{{ item  }}"
             state: "{{ 'stopped' if container.rootless|d(true) else 'started' }}"
             enabled: "{{ not container.rootless|d(true) }}"
+          loop:
+            - docker.socket
+            - docker.service
 
     - name: Prepare runtime users variable
       block:

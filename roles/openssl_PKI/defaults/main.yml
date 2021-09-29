@@ -1,0 +1,16 @@
+---
+# defaults file for openssl_CA
+openssl_PKI_def_key_cipher: aes512
+openssl_PKI_def_key_curve: secp521r1
+openssl_PKI_def_key_size: 8192
+openssl_PKI_def_key_format: auto_ignore
+# openssl_PKI_def_key_type: Ed25519
+# openssl_PKI_def_cert_digest: sha3
+openssl_PKI_def_key_type: RSA
+openssl_PKI_def_cert_digest: sha512
+openssl_PKI_def_cert_add_SKI: True
+
+openssl_PKI_def_ca_max_period: 365d
+openssl_PKI_def_ca_add_SKI: create_if_not_provided
+
+certificates_base_path: "{{ inventory_dir+'/certificates' }}"

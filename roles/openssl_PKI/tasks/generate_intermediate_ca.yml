@@ -1,0 +1,37 @@
+---
+- name: Create intermediate CA certificate
+  block:
+    - set_fact:
+        new_key_cert_options: "{{ 
+          ca_key_cert|combine(
+              { 'key_usage': ['keyCertSign', 'cRLSign'],
+                'key_usage_crt': true,
+                'key_ext_usage': [],
+                'key_ext_usage_crt': false,
+                'cert_CN_to_san': false,
+                'base_path': certificates_base_path+'/intermediate-ca/'+intermediate_ca_key_cert_options.cert_common_name|d(intermediate_ca_key_cert_options.cert_name)|d(intermediate_ca_key_cert_options.name),
+                'name': intermediate_ca_key_cert_options.cert_common_name|d(intermediate_ca_key_cert_options.cert_name)|d(intermediate_ca_key_cert_options.name)
+              }|combine(
+              {
+                'key_pass': intermediate_ca_key_cert_options.key_pass|d(intermediate_ca_key_cert_options.key_passphrase)|d(intermediate_ca_key_cert_options.key_password)
+              } if intermediate_ca_key_cert_options.key_pass|d(intermediate_ca_key_cert_options.key_passphrase)|d(intermediate_ca_key_cert_options.key_password)|d(false) else {}
+            ))
+          }}" # 'key_usage': ['digitalSignature', 'keyCertSign', 'cRLSign'],
+    - include_tasks: generate_csr.yml
+    - name: Sign intermediate CA certificate request
+      local_action:
+        module: community.crypto.x509_certificate
+        select_crypto_backend: cryptography
+        path: "{{ key_cert_path }}/cert.pem"
+        csr_path: "{{ key_cert_path }}/csr.pem"
+        provider: ownca
+        ownca_path: "{{ ca_key_cert_options.cert_path }}"
+        ownca_privatekey_path: "{{ ca_key_cert_options.key_pass|d(ca_key_cert_options.key_passphrase)|d(ca_key_cert_options.key_password)|d(false) }}"
+        ownca_privatekey_passphrase: "{{ ca_key_cert_options.key_pass|d(ca_key_cert_options.key_passphrase)|d(ca_key_cert.key_password)|d(false)) }}"
+
+        ownca_not_after: "{{ ca_key_cert.ca_max_period|d(openssl_PKI_def_ca_max_period) }}"
+
+        ownca_create_subject_key_identifier: "{{ ca_key_cert_options.ca_add_SKI|d(openssl_PKI_def_ca_add_SKI) }}"
+        ownca_digest: "{{ ca_key_cert.ca_cert_digest|d(openssl_PKI_def_cert_digest) }}"
+    
+    - import_tasks: ca_operation.yml

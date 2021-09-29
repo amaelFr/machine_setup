@@ -4,14 +4,21 @@
   roles:
     - role: amaelfr.deploy_docker_compose
       vars: # add runtime_user to discover dockersocket !!!! when DOCKER_HOST not set
-        src: https://github.com/amaelFr/enterprise_tools.git
+        # src: https://github.com/amaelFr/enterprise_tools.git
+        src: ~/documents/enterprise_tools/wordpress/
           # src_branch:
           # src_commit:
         name: wordpress
         runtime_user: "{{ wordpress_service_user|d(omit) }}"
+        # files:
+        #   - wordpress/docker-compose.yml
+        #   - wordpress/docker-compose.MYSQL.yml
+        #   - wordpress/docker-compose.WP_REVERSE-PROXY.yml
         files:
-          - wordpress/docker-compose.yml
-          - wordpress/docker-compose.MYSQL.yml
+          - docker-compose.yml
+          - docker-compose.MYSQL.yml
+          - docker-compose.WP_REVERSE-PROXY.yml
+          - docker-compose.WP-CLI.yml
         # use_runtime_user_socket: true
         # container_remove_volume: true
         general_environment:

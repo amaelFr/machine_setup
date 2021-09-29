@@ -1,0 +1,27 @@
+---
+- set_fact:
+    ca_options: "{{
+        ({'ca_cert_path': key_cert_path+'/cert.pem', 'ca_key_path': key_cert_path+'/privkey.pem' }|
+          combine({'ca_key_pass': key_cert_pass}
+            if key_cert_pass is defined and key_cert_pass
+            else {}
+          )
+        ) if new_key_cert_options is defined  else {}
+      }}"
+
+    # ca_cert_path
+    # ca_key_path
+    # ca_key_pass|d(ca_key_passphrase)|d(ca_key_password)
+    # base_path
+
+- name: Generate intermediate CA certificates recursivly
+  include_tasks: generate_intermediate_ca.yml
+  loop: "{{ new_key_cert_options.intermediate_ca|d([])|map('combine', ca_options) }}"
+  loop_control:
+    loop_var: intermediate_ca_key_cert_options
+
+# - name: Generate serveurs certificates
+#   include_tasks: generate_certificate.yml
+#   loop: "{{ new_key_cert_options.certificate|d([])|map('combine', ca_options) }}"
+#   loop_control:
+#     loop_var: certificate_key_cert_options

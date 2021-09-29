@@ -1,0 +1,16 @@
+---
+# tasks file for openssl_CA
+
+# https://superuser.com/questions/738612/openssl-ca-keyusage-extension
+
+- name: Generate CAs certificate recursivly
+  include_tasks: generate_root_ca.yml
+  loop: "{{ root_ca }}"
+  loop_control:
+    loop_var: root_ca_key_cert_options
+
+
+# - set_fact:
+#     new_key_cert_options: "{{ { 'intermediate_ca': intermediate_ca|d([]), 'certificate': certificate|d([]) } }}"
+# - import_tasks: ca_operation.yml
+
