@@ -1,0 +1,35 @@
+---
+- set_fact:
+    docker_reverse_proxy_services_modified: "{{ docker_reverse_proxy_services_modified|d([]) + [service] }}"
+  loop: "{{ docker_reverse_proxy_services }}"
+  loop_control:
+    loop_var: service
+  when: service is mapping
+
+
+- set_fact:
+    docker_reverse_proxy_services_modified: "{{ docker_reverse_proxy_services_modified|d([]) + [lookup('vars', service)] }}"
+  loop: "{{ docker_reverse_proxy_services }}"
+  loop_control:
+    loop_var: service
+  when: service is not mapping and lookup('vars', service, default=False) is mapping
+
+
+- include_tasks: subprepare.yml
+  loop: "{{ docker_reverse_proxy_services }}"
+  loop_control:
+    loop_var: service
+  when: service is not mapping and lookup('vars', service, default=False) is sequence
+
+- set_fact:
+    docker_reverse_proxy_services_modified: "{{ docker_reverse_proxy_services_modified|d([]) + [{'name':lookup('vars', service, default=service)}] }}"
+  loop: "{{ docker_reverse_proxy_services }}"
+  loop_control:
+    loop_var: service
+  when: service is not mapping and lookup('vars', service, default=False) is not sequence and lookup('vars', service, default=False) is not mapping
+
+
+- include_tasks: get_user_container_runtime_socket.yml
+  loop: "{{ docker_reverse_proxy_services_modified|d([]) }}"
+  loop_control:
+    loop_var: service

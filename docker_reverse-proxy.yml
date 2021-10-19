@@ -1,0 +1,37 @@
+---
+
+## every socket to listen on (docker one) hard link(normaluser:traefikgroup 750 ? 740?)
+
+
+# docker_reverse_proxy_services:
+# - name:
+#   user: d(if runtime rootless, will try to test user presence)
+#   socket: d(if user will ue user socket)
+
+
+- hosts: docker_reverse-proxy
+  become: true
+  roles:
+    - role: docker_reverse-proxy
+      vars:
+        runtime_user: "{{ docker_reverse_proxy_service_user|d(omit) }}"
+  # roles:
+  #   - role: amaelfr.deploy_docker_compose
+  #     vars: # add runtime_user to discover dockersocket !!!! when DOCKER_HOST not set
+  #       src: ~/documents/enterprise_tools/traefik/
+  #         # src_branch:
+  #         # src_commit:
+  #       name: docker_reverse_proxy
+  #       runtime_user: "{{ docker_reverse_proxy_service_user|d(omit) }}"
+  #       files:
+  #         - docker-compose.yml
+  #         - docker-compose.HTTP.yml
+  #         - docker-compose.HTTPS.yml
+  #         - docker-compose.TRAEFIK_NETWORK.yml
+  #         - "{{ 'docker-compose.UI.yml' if docker_reverse_proxy_debug else omit }}"
+  #       # use_runtime_user_socket: true
+  #       general_environment:
+  #         TRAEFIK_INTERFACE: "{{ docker_reverse_proxy_interface|d(omit) }}"
+  #         TRAEFIK_HTTP_PORT: "{{ docker_reverse_proxy_http_port|d(omit) }}"
+  #         TRAEFIK_HTTPS_PORT: "{{ docker_reverse_proxy_https_port|d(omit) }}"
+  #         TRAEFIK_CERTIFICATE: "{{ docker_reverse_proxy_certificate|d(omit) }}"

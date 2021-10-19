@@ -1,17 +1,6 @@
-
-- name: Remove NTP
-  package:
-    name: ntp
-    state: absent
-
 - name: Set timezone to {{ timezone }}
   community.general.timezone:
     name: "{{ timezone }}"
-
-- name: Install chrony
-  package:
-    name: chrony
-    state: latest
 
 - name: Creates directory
   file:

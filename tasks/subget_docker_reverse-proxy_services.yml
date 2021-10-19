@@ -1,0 +1,6 @@
+---
+- set_fact:
+    docker_reverse_proxy_services_modified: "{{ docker_reverse_proxy_services_modified|d([]) + [ sub_service if sub_service is mapping else {'name': sub_service}] }}"
+  loop: "{{ lookup('vars', service) }}"
+  loop_control:
+    loop_var: sub_service

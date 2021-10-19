@@ -1,0 +1,69 @@
+---
+
+- import_tasks: vars/prepare_services_mapping.yml
+
+# - when: "'unix:///var/run/docker.sock' in docker_reverse_proxy_services_final|json_query(json_query_socket)"
+#   become: "{{ true if reverse_proxy_runtime_user|d(runtime_user) is defined else omit }}"
+#   become_user: "{{ reverse_proxy_runtime_user|d(runtime_user)|d(omit) }}"
+#   stat:
+#     path: /var/run/docker.sock
+#   register: docker_socket_stat
+
+# - fail:
+#     msg: Docker root socket use but it look lik traefik user can't interact with, you may add the docker_reverse_proxy to docker group
+#   when: not docker_socket_stat.skipped and ( not docker_socket_stat.stat.exists or not docker_socket_stat.stat.readable )
+
+- debug:
+    var: reverse_proxy_runtime_user|d(runtime_user)|d(ansible_user_id)
+
+- register: rever_proxy_user_info
+  become: true
+  become_user: root
+  getent:
+    database: passwd
+    key: "{{ reverse_proxy_runtime_user|d(runtime_user)|d(ansible_user_id) }}"
+
+- name: Delete potential old reverse_proxy socket directory
+  ansible.builtin.file:
+    path: "{{ rever_proxy_user_info['ansible_facts']['getent_passwd'][reverse_proxy_runtime_user|d(runtime_user)|d(ansible_user_id)][4] }}/.revserse_proxy/"
+    state: absent
+
+- name: Create reverse_proxy socket direct if need
+  ansible.builtin.file:
+    path: "{{ rever_proxy_user_info['ansible_facts']['getent_passwd'][reverse_proxy_runtime_user|d(runtime_user)|d(ansible_user_id)][4] }}/.revserse_proxy/"
+    state: directory
+    mode: '0700'
+    owner: "{{ rever_proxy_user_info['ansible_facts']['getent_passwd'][reverse_proxy_runtime_user|d(runtime_user)|d(ansible_user_id)][1] }}"
+    group: "{{ rever_proxy_user_info['ansible_facts']['getent_passwd'][reverse_proxy_runtime_user|d(runtime_user)|d(ansible_user_id)][2] }}"
+
+- become: "{{ true if reverse_proxy_runtime_user|d(runtime_user) is defined else omit }}"
+  become_user: "{{ reverse_proxy_runtime_user|d(runtime_user)|d(omit) }}"
+  block:
+    - include_tasks: create_socket_hardlink.yml
+      loop: "{{  docker_reverse_proxy_services_final }}"
+      loop_control:
+        loop_var: service
+
+    - include_role:
+        name: amaelfr.deploy_docker_compose
+      vars:
+        # src: https://github.com/amaelFr/enterprise_tools.git
+        src: ~/documents/enterprise_tools/caddy/
+        name: caddy-reverse-proxy
+        # runtime_user: "{{ reverse_proxy_runtime_user|d(omit) }}"
+        files:
+          - docker-compose.yml
+          - docker-compose.HTTP.yml
+          - docker-compose.HTTPS.yml
+          - docker-compose.DEBUG.yml
+          - docker-compose.CADDY-OUT.yml
+        command_before_build: 
+          - ./generate_caddy_requirements.py --nets "{{ docker_reverse_proxy_services_final_socket|json_query('[*].net')|join(',') }}" --sock "{{ docker_reverse_proxy_services_final_socket|json_query('[*].socket')|join(',') }}"
+          - exit 1
+
+    # general_environment:
+    #   WP_INTERFACE: "{{ wordpress_interface|d(omit) }}"
+    #   WP_PORT: "{{ wordpress_port|d(omit) }}"
+
+
+#### todo caddy !!!!

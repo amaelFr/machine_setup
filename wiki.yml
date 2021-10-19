@@ -1,18 +1,45 @@
 ---
 - hosts: wiki
   become: true
-  roles:
-    - role: amaelfr.deploy_docker_compose
+  tasks:
+    - import_tasks: tasks/get_docker_reverse-proxy_services.yml
+
+    - import_role:
+        name: amaelfr.deploy_docker_compose
       vars: # add runtime_user to discover dockersocket !!!! when DOCKER_HOST not set
         src: https://github.com/amaelFr/enterprise_tools.git
+        src: ~/documents/enterprise_tools/wiki/wikijs/
           # src_branch:
           # src_commit:
         name: wiki
         runtime_user: "{{ wiki_service_user|d(omit) }}"
         files:
-          - wiki/wikijs/docker-compose.yml
-        # use_runtime_user_socket: true
+          # - wiki/wikijs/docker-compose.yml
+          - docker-compose.yml
+          - "{{ None if 'wiki' in docker_reverse_proxy_services_modified|json_query('[*].name')|d([]) else 'docker-compose.HTTP.yml' }}"
+          # - "{{ 'docker-compose.REVERSE_PROXY.yml' if 'wiki' in docker_reverse_proxy_services_modified|json_query('[*].name')|d([]) else None }}"
+          - "{{ 'docker-compose.CADDY_OUT.yml' if 'wiki' in docker_reverse_proxy_services_modified|json_query('[*].name')|d([]) and docker_reverse_proxy_type|d('caddy') == 'caddy' else None }}"
+          - "{{ 'docker-compose.TRAEFIK.yml' if 'wiki' in docker_reverse_proxy_services_modified|json_query('[*].name')|d([]) and docker_reverse_proxy_type|d('caddy') == 'traefik' else None }}"
+
         # container_remove_volume: true
+        command_before_down: 
+          - "{{ 'envsubst \"${WIKI_CADDY_LABEL}\" < docker-compose.CADDY-DEF.yml > docker-compose.CADDY_OUT.yml' if 'wiki' in docker_reverse_proxy_services_modified|json_query('[*].name')|d([]) and docker_reverse_proxy_type|d('caddy') == 'caddy' else None+' < docker-compose.CADDY.yml > docker-compose.CADDY_OUT.yml' if 'wiki' in docker_reverse_proxy_services_modified|json_query('[*].name')|d([]) and docker_reverse_proxy_type|d('caddy') == 'caddy' else 'echo ok' }}"
         general_environment:
-          WIKI_INTERFACE: "{{ wiki_interface|d(omit) }}"
-          WIKI_PORT: "{{ wiki_port|d(omit) }}"
+          WIKI_INTERFACE: "{{  None if 'wiki' in docker_reverse_proxy_services_modified|json_query('[*].name')|d([]) else wiki_interface|d(None) }}"
+          WIKI_PORT: "{{  None if 'wiki' in docker_reverse_proxy_services_modified|json_query('[*].name')|d([]) else wiki_port|d(None) }}"
+          WIKI_TRAEFIK_RULE: "{{
+                ( wiki_traefik_rule if wiki_traefik_rule|d(false) else (
+                      'HOST(\"' + wiki_vhosts|d(docker_reverse_proxy_base_vhosts|map('regex_replace', '(.*)', 'wiki.\\1'))|d(base_vhosts|map('regex_replace', '(.*)', 'wiki.\\1'))|join('\",\"') + '\")' 
+                    if wiki_vhosts|d(docker_reverse_proxy_base_vhosts)|d(base_vhosts)|d(false) else None
+                  )
+                )
+              if 'wiki' in docker_reverse_proxy_services_modified|json_query('[*].name')|d([]) and docker_reverse_proxy_type|d('caddy') == 'traefik' else None
+            }}"
+          WIKI_CADDY_LABEL: "{{
+                (wiki_caddy_label|d(
+                  {'caddy': wiki_vhosts|d(docker_reverse_proxy_base_vhosts|d(base_vhosts)|map('regex_replace', '^(.*)$', 'wiki.\\1'))|join(',')
+                  })|d({})
+                )|combine({'caddy.reverse_proxy': '{{upstreams 3000}}'})|to_json|quote
+              if 'wiki' in docker_reverse_proxy_services_modified|json_query('[*].name')|d([]) and docker_reverse_proxy_type|d('caddy') == 'caddy' else None
+            }}"
+          WIKI_REVERSE_PROXY_EXT_NET: "{{ docker_reverse_proxy_ext_nets|d(None) if 'wiki' in docker_reverse_proxy_services_modified|json_query('[*].name')|d([]) else None }}"

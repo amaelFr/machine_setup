@@ -1,19 +1,27 @@
 ---
 machine_level: 3
 
-timezone: Europe/London
-ntp:
-  pool: 0.pool.ntp.org
+update_hostname: true
 
-dynamic_motd: true
+system_custom_dirs_to_delete:
+  - motd
+  - update-motd.d
 
 packages_install: 
   - vim
   - tmux
   - git
   - python3-pip
+  - acl
+  - chrony
+  - bash-completion
+  # - iotop
+  # - dtsat
+  # - glances
+  # - htop
 packages_remove:
   - telnet
+  - ntp
 
 packages_install_custom: []
 packages_remove_custom: []
@@ -21,6 +29,8 @@ packages_remove_custom: []
 packages_install_server: []
 packages_remove_server:
   - task-laptop
+  - iwl*
+  - bluez*
 # mlocate rsync htop net-tools vim tmux zip pigz pixz iotop git psmisc
 # tree lynx at postfix lshw inxi figlet gdisk mc cifs-utils ntfs-3g sudo curl
 # sshfs apt-file openssl gnupg2 dnsutils fish gpm grc postfix ncdu p7zip-full
@@ -57,3 +67,11 @@ debian_packages_remove_desktop: []
 redhat_packages_remove_desktop: []
 
 deploy_current_ssh_key: true
+
+dynamic_motd: true
+
+timezone: Europe/London
+ntp:
+  pool: 0.pool.ntp.org
+
+non_acl_fs: []

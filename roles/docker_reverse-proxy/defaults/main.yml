@@ -1,0 +1,14 @@
+---
+
+docker_reverse_proxy_interface: 127.0.0.1
+docker_reverse_proxy_http_port: 8080
+docker_reverse_proxy_https_port: 8443
+
+docker_reverse_proxy_services: []
+# general_environment: {}
+docker_reverse_proxy_name_as_user: true
+docker_reverse_proxy_ext_nets: True
+
+# docker_reverse_proxy_user: 
+
+json_query_socket: "[].socket"

@@ -1,0 +1,17 @@
+---
+- name: Check if acl is enable on FS else rescue adding it
+  block:
+    - name: Check if acl is enable on the mount point
+      acl:
+        path: "{{ mounted_point.mount }}"
+  rescue:
+    - name: '/etc/fstab: Set opt "acl" for mount point {{ mounted_point.mount }}'
+      when: mounted_point.fstype not in 
+      lineinfile:
+        path: /etc/fstab
+        backup: yes
+        backrefs: yes
+        regexp: '^(\S+\s+{{ mounted_point.mount }}\s+\S+\s+)(?!(?:\S*,)?acl(?:,\S*)?\s+)(\S+)(\s+.+)$'
+        line: '\1acl,\2\3'
+      notify:
+        - Reboot server

@@ -2,6 +2,7 @@
   when: user.state|d(true) == true or user.state|d(omit) == "present"
   block:
     - name: Add a group for user
+      register: user_main_group
       ansible.builtin.group:
         name: "{{ user.group|d(user.name) }}"
         state: present
@@ -12,9 +13,9 @@
       ansible.builtin.user:
         name: "{{ user.name }}"
         comment: "{{ user.comment|d(omit) }}"
-        uid: "{{ user.uid|d(omit) }}"
+        uid: "{{ user.uid|d(user_main_group.gid) }}"
         group: "{{ user.group|d(user.name) }}"
-        shell: "{{ user.shell if user.enable|d(true) and user.shell_enable|d(true) and user.shell|d(false) and not user.system|d(false) else '/usr/bin/nologin' }}"
+        shell: "{{ user.shell if user.enable|d(true) and user.shell_enable|d(true) and user.shell|d(false) and not user.system|d(false) else '/usr/sbin/nologin' }}"
         home: "{{ user.home|d(omit) }}"
         password: "{{ user.password|d(user.pass)|password_hash('sha512') if user.password is defined or user.pass is defined else omit }}"
         password_lock: "{{ omit if user.enable|d(true) and not user.system|d(false) else true}}"

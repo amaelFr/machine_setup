@@ -1,0 +1,40 @@
+---
+- when: "'socket' in service"
+  set_fact:
+    docker_reverse_proxy_services_final: "{{ docker_reverse_proxy_services_final|d([]) + [service|combine({'net':service.net|d(service.name+'-reverse-proxy-net')})] }}"
+
+- when: not container.rootless|d(true) and 'socket' not in service
+  set_fact:
+    docker_reverse_proxy_services_final: "{{ docker_reverse_proxy_services_final|d([]) + [service|combine( { 'socket': 'unix:///var/run/docker.sock','net':service.net|d(service.name+'-reverse-proxy-net')} )] }}"
+
+- when: container.rootless|d(true) and 'socket' not in service
+  become: true
+  become_user: root
+  name: Get docker user socket
+  block:
+    - register: runtime_user_info
+      getent:
+        database: passwd
+        key: "{{ service.name if docker_reverse_proxy_name_as_user and 'user' not in service else service.user }}"
+    - register: runtime_socket_info_run
+      stat:
+        path: "/run/user/{{ runtime_user_info['ansible_facts']['getent_passwd'][(runtime_user_info['ansible_facts']['getent_passwd']|list)[0]][1] }}/docker.sock"
+    - register: runtime_socket_info_home_run
+      stat:
+        path: "{{ runtime_user_info['ansible_facts']['getent_passwd'][(runtime_user_info['ansible_facts']['getent_passwd']|list)[0]][4] }}/.docker/run/docker.sock"
+    - when: not (runtime_socket_info_run.stat.exists or runtime_socket_info_home_run.stat.exists)
+      fail:
+        msg: No user socket found for service {{ service.name }}, we will try to add normal root socket, may cause error
+
+    - when: runtime_socket_info_run.stat.exists
+      set_fact:
+        docker_reverse_proxy_services_final: "{{ docker_reverse_proxy_services_final|d([]) + [service|combine( { 'socket': 'unix:///run/user/'+runtime_user_info['ansible_facts']['getent_passwd'][(runtime_user_info['ansible_facts']['getent_passwd']|list)[0]][1]+'/docker.sock', 'net':service.net|d(service.name+'-reverse-proxy-net')} )] }}"
+    - when: runtime_socket_info_home_run.stat.exists
+      set_fact:
+        docker_reverse_proxy_services_final: "{{ docker_reverse_proxy_services_final|d([]) + [service|combine( { 'socket': 'unix://'+ runtime_user_info['ansible_facts']['getent_passwd'][(runtime_user_info['ansible_facts']['getent_passwd']|list)[0]][4] +'/.docker/run/docker.sock', 'net':service.net|d(service.name+'-reverse-proxy-net')} )] }}"
+  rescue:
+    - fail:
+        msg: No user or user socket found, this may cause error
+      ignore_errors: true
+    - set_fact:
+        docker_reverse_proxy_services_final: "{{ docker_reverse_proxy_services_final|d([]) + [service|combine( { 'socket': 'unix:///var/run/docker.sock', 'net':service.net|d(service.name+'-reverse-proxy-net')} )] }}"

@@ -1,0 +1,9 @@
+---
+- name: Mount all to be sure that all mount point are present ta add acl option
+  command: mount -a
+- name: Add acl for all poissible filyssytem that are mount
+  include_tasks: acl/add_acl_option_fstab.yml
+  loop_control:
+    loop_var: mounted_point
+  loop: "{{ ansible_facts['mounts'] }}"
+  when: mounted_point.fstype not in non_acl_fs

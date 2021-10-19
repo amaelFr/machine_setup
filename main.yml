@@ -11,18 +11,18 @@
   roles:
     - post-install
 
-- hosts: all
-  become: true
-  roles:
-    - user-gestion
-    # - secure-grub
+# - hosts: all
+#   become: true
+#   roles:
+#     - user-gestion
+#     # - secure-grub
 
-- hosts:
-    - docker
-    - wiki
-    - wordpress
-    - reverse_nginx
-  become: true
-  roles:
-    - container_runtime
+# - hosts:
+#     - docker
+#     - wiki
+#     - wordpress
+#     - traefik_reverse-nginx
+#   become: true
+#   roles:
+#     - container_runtime
 

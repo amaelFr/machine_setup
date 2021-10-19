@@ -1,0 +1,40 @@
+---
+- when: service.socket|regex_search('^unix://')
+  block:
+    - become_user: root
+      become: true
+      stat:
+        path: "{{ service.socket|regex_replace('^unix://', '') }}"
+      register: service_socket_stat_root
+    - when: not service_socket_stat_root.stat.exists
+      fail:
+        msg: It looks like the provide socket {{ service.socket }} do not exist
+    - stat:
+        path: "{{ service.socket|regex_replace('^unix://', '') }}"
+      register: service_socket_stat
+      failed_when: service_socket_stat.msg != "Permission denied"
+    - when: service.socket|regex_search('^unix://(/var/)?run/') and ('stat' not in service_socket_stat or 'stat' in service_socket_stat and not service_socket_stat.stat.readble)
+      fail:
+        msg: It looks like the provide socket {{ service.socket }} can't be hardlinking du to its presence in a run run partition and is not readable for reverse-proxy user
+    - set_fact:
+        socket_index: "{{ socket_index|d(-1)|int+1 }}"
+    - when: "'stat' in service_socket_stat and service_socket_stat.stat.readble"
+      set_fact:
+        docker_reverse_proxy_services_final_socket: "{{ docker_reverse_proxy_services_final_socket|d([]) + [service] }}"
+    - name: Create socket hardlink
+      when: "'stat' not in service_socket_stat or 'stat' in service_socket_stat and not service_socket_stat.stat.readble"
+      block:
+        - set_fact:
+            docker_reverse_proxy_services_final_socket: "{{ docker_reverse_proxy_services_final_socket|d([]) + [service|combine({'socket': 'unix://'+rever_proxy_user_info['ansible_facts']['getent_passwd'][reverse_proxy_runtime_user|d(runtime_user)|d(ansible_user_id)][4]+'/.revserse_proxy/docker_'+service.name+socket_index+'.socket'})] }}"
+        - become_user: root
+          become: true
+          ansible.builtin.file: # conserve sticky bit and put only reverse proxy group to r s---r----- !!! :-)
+            src: "{{ service.socket|regex_replace('^unix://', '') }}"
+            dest: "{{ rever_proxy_user_info['ansible_facts']['getent_passwd'][reverse_proxy_runtime_user|d(runtime_user)|d(ansible_user_id)][4] }}/.revserse_proxy/docker_{{ service.name }}{{ socket_index }}.socket"
+            group: "{{ rever_proxy_user_info['ansible_facts']['getent_passwd'][reverse_proxy_runtime_user|d(runtime_user)|d(ansible_user_id)][2] }}"
+            mode: '0040'
+            state: hard
+
+- when: not service.socket|regex_search('^unix://')
+  set_fact:
+    docker_reverse_proxy_services_final_socket: "{{ docker_reverse_proxy_services_final_socket|d([]) + [service] }}"
